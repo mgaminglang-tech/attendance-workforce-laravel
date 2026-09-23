@@ -1,9 +1,47 @@
-@import 'tailwindcss';
 @import 'bootstrap/dist/css/bootstrap.min.css';
-@source '../../vendor/laravel/framework/src/Illuminate/Pagination/resources/views/*.blade.php';
-@source '../../storage/framework/views/*.php';
 
-@theme {
-    --font-sans: 'Instrument Sans', ui-sans-serif, system-ui, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji',
-        'Segoe UI Symbol', 'Noto Color Emoji';
+:root {
+    --workforce-primary: #173b57;
+    --workforce-accent: #2f7597;
+}
+
+body {
+    font-family: 'Instrument Sans', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+}
+
+.app-navbar {
+    background-color: var(--workforce-primary);
+}
+
+.auth-shell {
+    min-height: 100vh;
+    background:
+        radial-gradient(circle at top right, rgb(47 117 151 / 18%), transparent 34rem),
+        #f4f7f9;
+}
+
+.auth-card {
+    max-width: 28rem;
+    border: 0;
+    box-shadow: 0 1rem 3rem rgb(23 59 87 / 12%);
+}
+
+.brand-mark {
+    display: inline-grid;
+    width: 3rem;
+    height: 3rem;
+    place-items: center;
+    border-radius: 0.85rem;
+    background-color: var(--workforce-primary);
+    color: #fff;
+    font-weight: 700;
+}
+
+.btn-workforce {
+    --bs-btn-bg: var(--workforce-primary);
+    --bs-btn-border-color: var(--workforce-primary);
+    --bs-btn-hover-bg: var(--workforce-accent);
+    --bs-btn-hover-border-color: var(--workforce-accent);
+    --bs-btn-color: #fff;
+    --bs-btn-hover-color: #fff;
 }

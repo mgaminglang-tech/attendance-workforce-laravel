@@ -3,6 +3,7 @@
 namespace App\Models;
 
 // use Illuminate\Contracts\Auth\MustVerifyEmail;
+use App\Enums\UserRole;
 use Database\Factories\UserFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Attributes\Hidden;
@@ -17,6 +18,11 @@ class User extends Authenticatable
     /** @use HasFactory<UserFactory> */
     use HasFactory, Notifiable;
 
+    public function hasRole(UserRole $role): bool
+    {
+        return $this->role === $role;
+    }
+
     /**
      * Get the attributes that should be cast.
      *
@@ -26,6 +32,9 @@ class User extends Authenticatable
     {
         return [
             'email_verified_at' => 'datetime',
+            'role' => UserRole::class,
+            'is_active' => 'boolean',
+            'last_login_at' => 'datetime',
             'password' => 'hashed',
         ];
     }
