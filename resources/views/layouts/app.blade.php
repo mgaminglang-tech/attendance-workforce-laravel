@@ -14,15 +14,26 @@
                 <a class="navbar-brand fw-semibold" href="{{ route(auth()->user()->role->dashboardRouteName()) }}">
                     Workforce Management
                 </a>
-                <form method="POST" action="{{ route('logout') }}">
-                    @csrf
-                    <button class="btn btn-sm btn-outline-light" type="submit">Sign out</button>
-                </form>
+                <div class="d-flex align-items-center gap-3">
+                    @can('manage-workforce')
+                        <a class="link-light text-decoration-none" href="{{ route('admin.employees.index') }}">Employees</a>
+                        <a class="link-light text-decoration-none" href="{{ route('admin.departments.index') }}">Departments</a>
+                    @endcan
+                    <form method="POST" action="{{ route('logout') }}">
+                        @csrf
+                        <button class="btn btn-sm btn-outline-light" type="submit">Sign out</button>
+                    </form>
+                </div>
             </div>
         </nav>
     @endauth
 
     <main>
+        @if (session('status'))
+            <div class="container pt-4">
+                <div class="alert alert-success mb-0" role="status">{{ session('status') }}</div>
+            </div>
+        @endif
         @yield('content')
     </main>
 </body>

@@ -2,6 +2,7 @@
 
 namespace Database\Factories;
 
+use App\Enums\AccountStatus;
 use App\Enums\UserRole;
 use App\Models\User;
 use Illuminate\Database\Eloquent\Factories\Factory;
@@ -31,7 +32,7 @@ class UserFactory extends Factory
             'email_verified_at' => now(),
             'password' => static::$password ??= Hash::make('password'),
             'role' => UserRole::Employee,
-            'is_active' => true,
+            'account_status' => AccountStatus::Active,
             'last_login_at' => null,
             'remember_token' => Str::random(10),
         ];
@@ -63,8 +64,21 @@ class UserFactory extends Factory
 
     public function inactive(): static
     {
+        return $this->disabled();
+    }
+
+    public function pending(): static
+    {
         return $this->state(fn (array $attributes): array => [
-            'is_active' => false,
+            'account_status' => AccountStatus::Pending,
+            'password' => null,
+        ]);
+    }
+
+    public function disabled(): static
+    {
+        return $this->state(fn (array $attributes): array => [
+            'account_status' => AccountStatus::Disabled,
         ]);
     }
 }

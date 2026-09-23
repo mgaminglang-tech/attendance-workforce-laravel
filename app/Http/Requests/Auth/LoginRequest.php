@@ -2,6 +2,7 @@
 
 namespace App\Http\Requests\Auth;
 
+use App\Enums\AccountStatus;
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Support\Facades\Auth;
@@ -45,7 +46,7 @@ class LoginRequest extends FormRequest
         if (! Auth::attempt([
             'email' => $this->string('email')->trim()->toString(),
             'password' => $this->string('password')->toString(),
-            'is_active' => true,
+            'account_status' => AccountStatus::Active->value,
         ], $this->boolean('remember'))) {
             RateLimiter::hit($this->throttleKey());
 

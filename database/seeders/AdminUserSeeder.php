@@ -2,6 +2,7 @@
 
 namespace Database\Seeders;
 
+use App\Enums\AccountStatus;
 use App\Enums\UserRole;
 use App\Models\User;
 use Illuminate\Database\Console\Seeds\WithoutModelEvents;
@@ -35,7 +36,7 @@ class AdminUserSeeder extends Seeder
             'name' => $credentials['name'],
             'password' => Hash::make($credentials['password']),
             'role' => UserRole::Admin,
-            'is_active' => true,
+            'account_status' => AccountStatus::Active,
         ])->save();
 
         $this->command?->info("Local administrator ready: {$user->email}");

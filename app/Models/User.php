@@ -3,6 +3,7 @@
 namespace App\Models;
 
 // use Illuminate\Contracts\Auth\MustVerifyEmail;
+use App\Enums\AccountStatus;
 use App\Enums\UserRole;
 use Database\Factories\UserFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
@@ -24,6 +25,11 @@ class User extends Authenticatable
         return $this->hasOne(Employee::class);
     }
 
+    public function employeeInvitation(): HasOne
+    {
+        return $this->hasOne(EmployeeInvitation::class);
+    }
+
     public function hasRole(UserRole $role): bool
     {
         return $this->role === $role;
@@ -39,7 +45,7 @@ class User extends Authenticatable
         return [
             'email_verified_at' => 'datetime',
             'role' => UserRole::class,
-            'is_active' => 'boolean',
+            'account_status' => AccountStatus::class,
             'last_login_at' => 'datetime',
             'password' => 'hashed',
         ];

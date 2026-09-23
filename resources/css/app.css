@@ -45,3 +45,19 @@ body {
     --bs-btn-color: #fff;
     --bs-btn-hover-color: #fff;
 }
+
+.table-actions {
+    white-space: nowrap;
+}
+
+.status-badge {
+    min-width: 5.5rem;
+}
+
+.detail-label {
+    color: var(--bs-secondary-color);
+    font-size: 0.8125rem;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+}
