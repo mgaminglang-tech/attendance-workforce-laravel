@@ -6,6 +6,10 @@ use App\Http\Controllers\Admin\EmployeeAccountController;
 use App\Http\Controllers\Admin\EmployeeController;
 use App\Http\Controllers\Admin\EmployeeInvitationController;
 use App\Http\Controllers\Auth\AuthenticatedSessionController;
+use App\Http\Controllers\Employee\AttendanceController;
+use App\Http\Controllers\Employee\AttendanceHistoryController;
+use App\Http\Controllers\Employee\TimeInController;
+use App\Http\Controllers\Employee\TimeOutController;
 use App\Http\Controllers\InvitationController;
 use Illuminate\Support\Facades\Route;
 
@@ -42,7 +46,13 @@ Route::middleware(['auth', 'account.active', 'role:'.UserRole::Admin->value])->g
 });
 
 Route::middleware(['auth', 'account.active', 'role:'.UserRole::Employee->value])->group(function () {
-    Route::view('/employee/dashboard', 'employee.dashboard')->name('employee.dashboard');
+    Route::prefix('employee')->name('employee.')->group(function () {
+        Route::view('/dashboard', 'employee.dashboard')->name('dashboard');
+        Route::get('/attendance', [AttendanceController::class, 'index'])->name('attendance.index');
+        Route::post('/attendance/time-in', TimeInController::class)->name('attendance.time-in');
+        Route::post('/attendance/time-out', TimeOutController::class)->name('attendance.time-out');
+        Route::get('/attendance/history', AttendanceHistoryController::class)->name('attendance.history');
+    });
 });
 
 Route::middleware(['guest', 'throttle:employee-invitation-accept'])->group(function () {

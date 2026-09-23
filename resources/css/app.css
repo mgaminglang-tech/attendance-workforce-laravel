@@ -61,3 +61,10 @@ body {
     letter-spacing: 0.04em;
     text-transform: uppercase;
 }
+
+.attendance-clock {
+    color: var(--workforce-primary);
+    font-size: clamp(1.35rem, 3vw, 2rem);
+    font-variant-numeric: tabular-nums;
+    font-weight: 700;
+}

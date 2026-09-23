@@ -19,6 +19,10 @@
                         <a class="link-light text-decoration-none" href="{{ route('admin.employees.index') }}">Employees</a>
                         <a class="link-light text-decoration-none" href="{{ route('admin.departments.index') }}">Departments</a>
                     @endcan
+                    @if (auth()->user()->role === \App\Enums\UserRole::Employee)
+                        <a class="link-light text-decoration-none" href="{{ route('employee.attendance.index') }}">Attendance</a>
+                        <a class="link-light text-decoration-none" href="{{ route('employee.attendance.history') }}">History</a>
+                    @endif
                     <form method="POST" action="{{ route('logout') }}">
                         @csrf
                         <button class="btn btn-sm btn-outline-light" type="submit">Sign out</button>
@@ -36,5 +40,6 @@
         @endif
         @yield('content')
     </main>
+    @stack('scripts')
 </body>
 </html>
