@@ -2,6 +2,7 @@
 
 namespace Database\Factories;
 
+use App\Enums\WorkArrangement;
 use App\Models\AttendanceAdjustment;
 use App\Models\AttendanceSession;
 use App\Models\User;
@@ -31,9 +32,11 @@ class AttendanceAdjustmentFactory extends Factory
             'previous_work_date' => $previousTimeIn->toDateString(),
             'previous_time_in_at' => $previousTimeIn,
             'previous_time_out_at' => $previousTimeIn->addHours(8),
+            'before_work_arrangement' => WorkArrangement::WorkFromHome,
             'corrected_work_date' => $correctedTimeIn->toDateString(),
             'corrected_time_in_at' => $correctedTimeIn,
             'corrected_time_out_at' => $correctedTimeIn->addHours(8),
+            'after_work_arrangement' => WorkArrangement::OfficeBased,
             'corrected_at' => now(config('app.timezone')),
         ];
     }

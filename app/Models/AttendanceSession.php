@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Enums\WorkArrangement;
 use Database\Factories\AttendanceSessionFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -44,6 +45,7 @@ class AttendanceSession extends Model
             'work_date' => 'date',
             'time_in_at' => 'immutable_datetime',
             'time_out_at' => 'immutable_datetime',
+            'work_arrangement' => WorkArrangement::class,
         ];
     }
 }

@@ -21,6 +21,7 @@
                             <th scope="col">Work date</th>
                             <th scope="col">Time In</th>
                             <th scope="col">Time Out</th>
+                            <th scope="col">Work Arrangement</th>
                             <th scope="col">Duration</th>
                         </tr>
                     </thead>
@@ -31,6 +32,7 @@
                                 <td class="fw-semibold">{{ $attendanceSession->work_date->format('M j, Y') }}</td>
                                 <td>{{ $attendanceSession->time_in_at->format('M j, Y g:i:s A') }}</td>
                                 <td>{{ $attendanceSession->time_out_at?->format('M j, Y g:i:s A') ?? 'Still working' }}</td>
+                                <td>{{ $attendanceSession->work_arrangement?->label() ?? 'Not recorded' }}</td>
                                 <td>
                                     @if ($workedMinutes === null)
                                         <span class="badge text-bg-success">Open</span>
@@ -41,7 +43,7 @@
                             </tr>
                         @empty
                             <tr>
-                                <td class="text-center text-body-secondary py-5" colspan="4">No attendance records yet.</td>
+                                <td class="text-center text-body-secondary py-5" colspan="5">No attendance records yet.</td>
                             </tr>
                         @endforelse
                     </tbody>

@@ -4,6 +4,7 @@ namespace Tests\Feature;
 
 use App\Actions\Attendance\TimeInEmployee;
 use App\Enums\AccountStatus;
+use App\Enums\WorkArrangement;
 use App\Exceptions\AttendanceActionException;
 use App\Models\AttendanceSession;
 use App\Models\Employee;
@@ -61,7 +62,7 @@ class AttendanceAuthorizationTest extends TestCase
         Employee::factory()->for($user)->create();
 
         try {
-            $this->app->make(TimeInEmployee::class)->handle($user);
+            $this->app->make(TimeInEmployee::class)->handle($user, WorkArrangement::OfficeBased);
             $this->fail('Expected the account status to reject Time In.');
         } catch (AttendanceActionException $exception) {
             $this->assertSame('Your account is not permitted to record attendance.', $exception->getMessage());
@@ -75,7 +76,7 @@ class AttendanceAuthorizationTest extends TestCase
         Employee::factory()->inactive()->for($user)->create();
 
         $this->actingAs($user)
-            ->post(route('employee.attendance.time-in'))
+            ->post(route('employee.attendance.time-in'), ['work_arrangement' => WorkArrangement::OfficeBased->value])
             ->assertRedirect(route('employee.attendance.index'))
             ->assertSessionHasErrors([
                 'attendance' => 'Your employment status does not permit attendance actions.',
@@ -104,7 +105,7 @@ class AttendanceAuthorizationTest extends TestCase
         $user = User::factory()->employee()->create();
 
         $this->actingAs($user)
-            ->post(route('employee.attendance.time-in'))
+            ->post(route('employee.attendance.time-in'), ['work_arrangement' => WorkArrangement::OfficeBased->value])
             ->assertSessionHasErrors([
                 'attendance' => 'No employee profile is available for this account.',
             ]);

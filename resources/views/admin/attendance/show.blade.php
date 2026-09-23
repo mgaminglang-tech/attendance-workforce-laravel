@@ -25,6 +25,7 @@
                     <div class="col-md-4"><p class="detail-label mb-1">State</p><p class="mb-0">{{ $attendanceSession->time_out_at === null ? 'Open' : 'Completed' }}</p></div>
                     <div class="col-md-4"><p class="detail-label mb-1">Time In</p><p class="mb-0">{{ $attendanceSession->time_in_at->format('M j, Y g:i:s A') }}</p></div>
                     <div class="col-md-4"><p class="detail-label mb-1">Time Out</p><p class="mb-0">{{ $attendanceSession->time_out_at?->format('M j, Y g:i:s A') ?? 'Still working' }}</p></div>
+                    <div class="col-md-4"><p class="detail-label mb-1">Work Arrangement</p><p class="mb-0">{{ $attendanceSession->work_arrangement?->label() ?? 'Not recorded' }}</p></div>
                     <div class="col-md-4"><p class="detail-label mb-1">Duration</p><p class="mb-0">{{ $workedMinutes === null ? 'Open' : intdiv($workedMinutes, 60).'h '.($workedMinutes % 60).'m' }}</p></div>
                     <div class="col-md-4"><p class="detail-label mb-1">Created</p><p class="mb-0">{{ $attendanceSession->created_at->format('M j, Y g:i:s A') }}</p></div>
                 </div>
@@ -56,6 +57,7 @@
                                 <p class="small mb-1">Work date: {{ $adjustment->previous_work_date->format('M j, Y') }}</p>
                                 <p class="small mb-1">Time In: {{ $adjustment->previous_time_in_at->format('M j, Y g:i:s A') }}</p>
                                 <p class="small mb-0">Time Out: {{ $adjustment->previous_time_out_at?->format('M j, Y g:i:s A') ?? 'Open' }}</p>
+                                <p class="small mb-0">Work Arrangement: {{ $adjustment->before_work_arrangement?->label() ?? 'Not recorded' }}</p>
                             </div>
                         </div>
                         <div class="col-md-6">
@@ -64,6 +66,7 @@
                                 <p class="small mb-1">Work date: {{ $adjustment->corrected_work_date->format('M j, Y') }}</p>
                                 <p class="small mb-1">Time In: {{ $adjustment->corrected_time_in_at->format('M j, Y g:i:s A') }}</p>
                                 <p class="small mb-0">Time Out: {{ $adjustment->corrected_time_out_at?->format('M j, Y g:i:s A') ?? 'Open' }}</p>
+                                <p class="small mb-0">Work Arrangement: {{ $adjustment->after_work_arrangement?->label() ?? 'Not recorded' }}</p>
                             </div>
                         </div>
                     </div>

@@ -2,10 +2,13 @@
 
 namespace App\Http\Requests\Admin;
 
+use App\Enums\WorkArrangement;
+use App\Models\AttendanceSession;
 use Carbon\CarbonImmutable;
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Support\Str;
+use Illuminate\Validation\Rule;
 use Illuminate\Validation\Validator;
 
 class CorrectAttendanceSessionRequest extends FormRequest
@@ -28,6 +31,7 @@ class CorrectAttendanceSessionRequest extends FormRequest
         return [
             'time_in_at' => ['required', 'date_format:Y-m-d\TH:i:s'],
             'time_out_at' => ['nullable', 'date_format:Y-m-d\TH:i:s'],
+            'work_arrangement' => ['nullable', Rule::enum(WorkArrangement::class)],
             'reason' => ['required', 'string', 'min:10', 'max:1000'],
         ];
     }
@@ -42,6 +46,7 @@ class CorrectAttendanceSessionRequest extends FormRequest
             'time_in_at.required' => 'Corrected Time In is required.',
             'time_in_at.date_format' => 'Corrected Time In must be a valid Asia/Manila date and time.',
             'time_out_at.date_format' => 'Corrected Time Out must be a valid Asia/Manila date and time.',
+            'work_arrangement.enum' => 'Select a valid Work Arrangement.',
         ];
     }
 
@@ -50,7 +55,7 @@ class CorrectAttendanceSessionRequest extends FormRequest
     {
         return [
             function (Validator $validator): void {
-                if ($validator->errors()->hasAny(['time_in_at', 'time_out_at', 'reason'])) {
+                if ($validator->errors()->hasAny(['time_in_at', 'time_out_at', 'work_arrangement', 'reason'])) {
                     return;
                 }
 
@@ -91,6 +96,22 @@ class CorrectAttendanceSessionRequest extends FormRequest
             $this->string('time_out_at')->toString(),
             config('app.timezone'),
         );
+    }
+
+    public function correctedWorkArrangement(): ?WorkArrangement
+    {
+        if (! $this->exists('work_arrangement')) {
+            /** @var AttendanceSession $attendanceSession */
+            $attendanceSession = $this->route('attendanceSession');
+
+            return $attendanceSession->work_arrangement;
+        }
+
+        if (! $this->filled('work_arrangement')) {
+            return null;
+        }
+
+        return WorkArrangement::from($this->string('work_arrangement')->toString());
     }
 
     protected function prepareForValidation(): void

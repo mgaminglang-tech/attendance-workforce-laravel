@@ -55,6 +55,8 @@
                                 <dd class="col-sm-8">{{ $currentSession->time_in_at->format('M j, Y g:i:s A') }}</dd>
                                 <dt class="col-sm-4 text-body-secondary">Time Out</dt>
                                 <dd class="col-sm-8 mb-0">{{ $currentSession->time_out_at?->format('M j, Y g:i:s A') ?? 'Still working' }}</dd>
+                                <dt class="col-sm-4 text-body-secondary">Work Arrangement</dt>
+                                <dd class="col-sm-8 mb-0">{{ $currentSession->work_arrangement?->label() ?? 'Not recorded' }}</dd>
                             </dl>
                         @else
                             <p class="text-body-secondary">No attendance has been recorded for {{ $workDate }}.</p>
@@ -72,7 +74,25 @@
                         @elseif ($currentSession === null)
                             <form method="POST" action="{{ route('employee.attendance.time-in') }}" data-submit-once>
                                 @csrf
-                                <button class="btn btn-workforce btn-lg" type="submit" data-submitting-text="Recording Time In…">Time In</button>
+                                <fieldset class="mb-4">
+                                    <legend class="h6 mb-3">Work arrangement</legend>
+                                    <div class="row g-2">
+                                        @foreach ($workArrangements as $workArrangement)
+                                            <div class="col-12 col-sm-4 work-arrangement-option">
+                                                <input class="btn-check" id="work-arrangement-{{ $workArrangement->value }}"
+                                                       name="work_arrangement" type="radio" value="{{ $workArrangement->value }}"
+                                                       autocomplete="off" required @checked(old('work_arrangement') === $workArrangement->value)>
+                                                <label class="btn btn-outline-primary w-100" for="work-arrangement-{{ $workArrangement->value }}">
+                                                    {{ $workArrangement->label() }}
+                                                </label>
+                                            </div>
+                                        @endforeach
+                                    </div>
+                                    @error('work_arrangement')
+                                        <p class="text-danger small mt-2 mb-0">{{ $message }}</p>
+                                    @enderror
+                                </fieldset>
+                                <button class="btn btn-workforce btn-lg w-100" type="submit" data-submitting-text="Recording Time In…">Time In</button>
                             </form>
                         @else
                             <p class="text-success fw-semibold mb-0">Your attendance for this work date is complete.</p>

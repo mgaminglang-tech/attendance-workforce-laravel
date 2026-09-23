@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Enums\WorkArrangement;
 use App\Models\AttendanceSession;
 use App\Models\Department;
 use App\Models\DepartmentHrAssignment;
@@ -35,6 +36,7 @@ class TeamAttendancePollingTest extends TestCase
         AttendanceSession::factory()->for($financeMember)->open()->create([
             'work_date' => '2026-09-24',
             'time_in_at' => '2026-09-24 08:00:00',
+            'work_arrangement' => WorkArrangement::OfficeBased,
         ]);
         AttendanceSession::factory()->for($itMember)->open()->create([
             'work_date' => '2026-09-24',
@@ -48,10 +50,11 @@ class TeamAttendancePollingTest extends TestCase
 
         $this->assertSame(['department', 'summary', 'members', 'last_updated'], array_keys($payload));
         $this->assertSame(
-            ['employee_name', 'employee_number', 'status', 'time_in', 'time_out', 'work_date'],
+            ['employee_name', 'employee_number', 'status', 'work_arrangement', 'time_in', 'time_out', 'work_date'],
             array_keys($payload['members'][0]),
         );
         $this->assertContains('Finance Member', array_column($payload['members'], 'employee_name'));
+        $this->assertContains('Office-Based', array_column($payload['members'], 'work_arrangement'));
         $this->assertNotContains('IT Private Member', array_column($payload['members'], 'employee_name'));
         $this->assertArrayNotHasKey('email', $payload['members'][0]);
         $this->assertArrayNotHasKey('correction_reason', $payload['members'][0]);

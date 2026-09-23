@@ -32,6 +32,7 @@ class AttendanceCorrectionController extends Controller
             attendanceSession: $attendanceSession,
             correctedTimeInAt: $request->correctedTimeInAt(),
             correctedTimeOutAt: $request->correctedTimeOutAt(),
+            correctedWorkArrangement: $request->correctedWorkArrangement(),
             reason: $request->string('reason')->toString(),
         );
 

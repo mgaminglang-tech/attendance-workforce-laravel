@@ -66,7 +66,7 @@ if (teamAttendance) {
         if (members.length === 0) {
             const row = document.createElement('tr');
             const cell = appendCell(row, 'No active employees are assigned to this department.');
-            cell.colSpan = 5;
+            cell.colSpan = 6;
             cell.className = 'text-center text-body-secondary py-5';
             rows.append(row);
         }
@@ -91,6 +91,7 @@ if (teamAttendance) {
             statusCell.append(statusBadge);
             row.append(statusCell);
 
+            appendCell(row, member.work_arrangement);
             appendCell(row, member.work_date);
             appendCell(row, member.time_in);
             appendCell(row, member.time_out);

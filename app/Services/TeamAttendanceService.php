@@ -14,7 +14,7 @@ class TeamAttendanceService
      * @return array{
      *     department: array{id: int, name: string},
      *     summary: array{total: int, working: int, completed: int, not_clocked_in: int},
-     *     members: list<array{employee_name: string, employee_number: string, status: string, time_in: ?string, time_out: ?string, work_date: ?string}>,
+     *     members: list<array{employee_name: string, employee_number: string, status: string, work_arrangement: ?string, time_in: ?string, time_out: ?string, work_date: ?string}>,
      *     last_updated: string
      * }
      */
@@ -30,7 +30,7 @@ class TeamAttendanceService
             ->with([
                 'user:id,name',
                 'attendanceSessions' => fn ($query) => $query
-                    ->select(['id', 'employee_id', 'work_date', 'time_in_at', 'time_out_at'])
+                    ->select(['id', 'employee_id', 'work_date', 'time_in_at', 'time_out_at', 'work_arrangement'])
                     ->where(function ($query) use ($workDate): void {
                         $query->whereNull('time_out_at')
                             ->orWhereDate('work_date', $workDate);
@@ -58,6 +58,9 @@ class TeamAttendanceService
                 'employee_name' => $employee->user->name,
                 'employee_number' => $employee->employee_number,
                 'status' => $status,
+                'work_arrangement' => $currentSession === null
+                    ? null
+                    : ($currentSession->work_arrangement?->label() ?? 'Not recorded'),
                 'time_in' => $currentSession?->time_in_at->format('M j, Y g:i:s A'),
                 'time_out' => $currentSession?->time_out_at?->format('M j, Y g:i:s A'),
                 'work_date' => $currentSession?->work_date->format('M j, Y'),

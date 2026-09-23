@@ -162,9 +162,9 @@ class AttendanceCorrectionTest extends TestCase
         $action = app(CorrectAttendanceSession::class);
 
         CarbonImmutable::setTestNow('2026-09-23 18:00:00');
-        $first = $action->handle($admin, $session, $this->manila('2026-09-23 08:00:00'), $this->manila('2026-09-23 17:00:00'), 'First verified correction.');
+        $first = $action->handle($admin, $session, $this->manila('2026-09-23 08:00:00'), $this->manila('2026-09-23 17:00:00'), $session->work_arrangement, 'First verified correction.');
         CarbonImmutable::setTestNow('2026-09-23 19:00:00');
-        $second = $action->handle($admin, $session, $this->manila('2026-09-23 08:15:00'), $this->manila('2026-09-23 17:00:00'), 'Second verified correction.');
+        $second = $action->handle($admin, $session, $this->manila('2026-09-23 08:15:00'), $this->manila('2026-09-23 17:00:00'), $session->work_arrangement, 'Second verified correction.');
 
         $this->assertTrue($first->corrected_time_out_at->equalTo($second->previous_time_out_at));
         $this->assertSame([$first->id, $second->id], $session->adjustments()->orderBy('corrected_at')->pluck('id')->all());
@@ -210,6 +210,7 @@ class AttendanceCorrectionTest extends TestCase
                 $session,
                 $session->time_in_at->addMinute(),
                 $session->time_out_at?->addMinute(),
+                $session->work_arrangement,
                 'Unauthorized correction attempt.',
             );
             $this->fail('An employee should not authorize the correction action.');
@@ -227,6 +228,7 @@ class AttendanceCorrectionTest extends TestCase
                 $session,
                 $session->time_in_at->addMinutes(5),
                 $session->time_out_at,
+                $session->work_arrangement,
                 'This audit insert must fail atomically.',
             );
             $this->fail('The audit foreign key should reject the missing administrator.');

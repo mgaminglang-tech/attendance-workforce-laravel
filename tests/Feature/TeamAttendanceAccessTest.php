@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Enums\WorkArrangement;
 use App\Models\Department;
 use App\Models\DepartmentHrAssignment;
 use App\Models\Employee;
@@ -65,7 +66,9 @@ class TeamAttendanceAccessTest extends TestCase
         $this->assertFalse(Gate::forUser($representative)->allows('viewTeamAttendance', $it));
 
         $this->actingAs($representative)->get(route('employee.attendance.index'))->assertOk();
-        $this->actingAs($representative)->post(route('employee.attendance.time-in'))->assertRedirect();
+        $this->actingAs($representative)->post(route('employee.attendance.time-in'), [
+            'work_arrangement' => WorkArrangement::OfficeBased->value,
+        ])->assertRedirect();
         $this->assertSame(1, $representative->employee->attendanceSessions()->count());
     }
 

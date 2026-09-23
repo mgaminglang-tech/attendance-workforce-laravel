@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Enums\WorkArrangement;
 use Database\Factories\AttendanceAdjustmentFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -32,9 +33,11 @@ class AttendanceAdjustment extends Model
             'previous_work_date' => 'date',
             'previous_time_in_at' => 'immutable_datetime',
             'previous_time_out_at' => 'immutable_datetime',
+            'before_work_arrangement' => WorkArrangement::class,
             'corrected_work_date' => 'date',
             'corrected_time_in_at' => 'immutable_datetime',
             'corrected_time_out_at' => 'immutable_datetime',
+            'after_work_arrangement' => WorkArrangement::class,
             'corrected_at' => 'immutable_datetime',
         ];
     }

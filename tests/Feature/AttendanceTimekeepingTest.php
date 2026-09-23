@@ -5,6 +5,7 @@ namespace Tests\Feature;
 use App\Actions\Attendance\TimeInEmployee;
 use App\Actions\Attendance\TimeOutEmployee;
 use App\Enums\AccountStatus;
+use App\Enums\WorkArrangement;
 use App\Exceptions\AttendanceActionException;
 use App\Models\AttendanceSession;
 use App\Models\Employee;
@@ -27,6 +28,7 @@ class AttendanceTimekeepingTest extends TestCase
             'work_date' => '1999-01-01',
             'time_in_at' => '1999-01-01 00:00:00',
             'employee_id' => Employee::factory()->create()->id,
+            'work_arrangement' => WorkArrangement::OfficeBased->value,
         ])->assertRedirect(route('employee.attendance.index'))
             ->assertSessionHas('status', 'You are now timed in.');
 
@@ -44,7 +46,7 @@ class AttendanceTimekeepingTest extends TestCase
         $this->travelTo(CarbonImmutable::parse('2026-09-23 16:30:00', 'UTC'));
         [$user, $employee] = $this->activeEmployee();
 
-        $attendanceSession = $this->app->make(TimeInEmployee::class)->handle($user);
+        $attendanceSession = $this->app->make(TimeInEmployee::class)->handle($user, WorkArrangement::WorkFromHome);
 
         $this->assertTrue($attendanceSession->employee->is($employee));
         $this->assertSame('2026-09-24', $attendanceSession->work_date->toDateString());
@@ -55,10 +57,12 @@ class AttendanceTimekeepingTest extends TestCase
     {
         [$user] = $this->activeEmployee();
 
-        $this->actingAs($user)->post(route('employee.attendance.time-in'));
+        $this->actingAs($user)->post(route('employee.attendance.time-in'), [
+            'work_arrangement' => WorkArrangement::OfficeBased->value,
+        ]);
 
         $this->actingAs($user)
-            ->post(route('employee.attendance.time-in'))
+            ->post(route('employee.attendance.time-in'), ['work_arrangement' => WorkArrangement::FieldBased->value])
             ->assertRedirect(route('employee.attendance.index'))
             ->assertSessionHasErrors([
                 'attendance' => 'You are already timed in.',
@@ -77,7 +81,7 @@ class AttendanceTimekeepingTest extends TestCase
         ]);
 
         $this->actingAs($user)
-            ->post(route('employee.attendance.time-in'))
+            ->post(route('employee.attendance.time-in'), ['work_arrangement' => WorkArrangement::OfficeBased->value])
             ->assertSessionHasErrors([
                 'attendance' => 'Your attendance for today has already been completed.',
             ]);
@@ -156,7 +160,7 @@ class AttendanceTimekeepingTest extends TestCase
     {
         $this->travelTo(CarbonImmutable::parse('2026-09-23 23:30:00', 'Asia/Manila'));
         [$user] = $this->activeEmployee();
-        $attendanceSession = $this->app->make(TimeInEmployee::class)->handle($user);
+        $attendanceSession = $this->app->make(TimeInEmployee::class)->handle($user, WorkArrangement::OfficeBased);
         $this->travelTo(CarbonImmutable::parse('2026-09-24 07:30:00', 'Asia/Manila'));
 
         $closedSession = $this->app->make(TimeOutEmployee::class)->handle($user);

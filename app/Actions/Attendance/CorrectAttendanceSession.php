@@ -2,6 +2,7 @@
 
 namespace App\Actions\Attendance;
 
+use App\Enums\WorkArrangement;
 use App\Models\AttendanceAdjustment;
 use App\Models\AttendanceSession;
 use App\Models\Employee;
@@ -20,6 +21,7 @@ class CorrectAttendanceSession
         AttendanceSession $attendanceSession,
         CarbonImmutable $correctedTimeInAt,
         ?CarbonImmutable $correctedTimeOutAt,
+        ?WorkArrangement $correctedWorkArrangement,
         string $reason,
     ): AttendanceAdjustment {
         Gate::forUser($administrator)->authorize('manage-workforce');
@@ -47,6 +49,7 @@ class CorrectAttendanceSession
             $attendanceSession,
             $correctedTimeInAt,
             $correctedTimeOutAt,
+            $correctedWorkArrangement,
             $reason,
             $timezone,
         ): AttendanceAdjustment {
@@ -65,10 +68,17 @@ class CorrectAttendanceSession
                 $correctedTimeOutAt === null || $lockedSession->time_out_at === null => true,
                 default => ! $correctedTimeOutAt->equalTo($lockedSession->time_out_at),
             };
+            $workArrangementChanged = $correctedWorkArrangement !== $lockedSession->work_arrangement;
 
-            if (! $timeInChanged && ! $timeOutChanged) {
+            if ($lockedSession->work_arrangement !== null && $correctedWorkArrangement === null) {
                 throw ValidationException::withMessages([
-                    'time_in_at' => 'Change at least one attendance value before saving a correction.',
+                    'work_arrangement' => 'A recorded Work Arrangement cannot be cleared.',
+                ]);
+            }
+
+            if (! $timeInChanged && ! $timeOutChanged && ! $workArrangementChanged) {
+                throw ValidationException::withMessages([
+                    'work_arrangement' => 'Change at least one attendance value before saving a correction.',
                 ]);
             }
 
@@ -92,11 +102,13 @@ class CorrectAttendanceSession
             $previousWorkDate = $lockedSession->work_date;
             $previousTimeInAt = $lockedSession->time_in_at;
             $previousTimeOutAt = $lockedSession->time_out_at;
+            $beforeWorkArrangement = $lockedSession->work_arrangement;
 
             $lockedSession->forceFill([
                 'work_date' => $correctedWorkDate,
                 'time_in_at' => $correctedTimeInAt,
                 'time_out_at' => $correctedTimeOutAt,
+                'work_arrangement' => $correctedWorkArrangement,
             ])->save();
 
             $adjustment = new AttendanceAdjustment;
@@ -107,9 +119,11 @@ class CorrectAttendanceSession
                 'previous_work_date' => $previousWorkDate,
                 'previous_time_in_at' => $previousTimeInAt,
                 'previous_time_out_at' => $previousTimeOutAt,
+                'before_work_arrangement' => $beforeWorkArrangement,
                 'corrected_work_date' => $correctedWorkDate,
                 'corrected_time_in_at' => $correctedTimeInAt,
                 'corrected_time_out_at' => $correctedTimeOutAt,
+                'after_work_arrangement' => $correctedWorkArrangement,
                 'corrected_at' => now($timezone),
             ])->save();
 

@@ -68,3 +68,11 @@ body {
     font-variant-numeric: tabular-nums;
     font-weight: 700;
 }
+
+.work-arrangement-option .btn {
+    display: grid;
+    min-height: 3.5rem;
+    padding: 0.75rem;
+    place-items: center;
+    white-space: normal;
+}

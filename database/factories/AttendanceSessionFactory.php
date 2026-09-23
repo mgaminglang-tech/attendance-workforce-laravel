@@ -2,6 +2,7 @@
 
 namespace Database\Factories;
 
+use App\Enums\WorkArrangement;
 use App\Models\AttendanceSession;
 use App\Models\Employee;
 use Carbon\CarbonImmutable;
@@ -27,6 +28,7 @@ class AttendanceSessionFactory extends Factory
             'work_date' => $timeIn->toDateString(),
             'time_in_at' => $timeIn,
             'time_out_at' => $timeIn->addHours(8),
+            'work_arrangement' => fake()->randomElement(WorkArrangement::cases()),
         ];
     }
 
@@ -34,6 +36,13 @@ class AttendanceSessionFactory extends Factory
     {
         return $this->state(fn (array $attributes): array => [
             'time_out_at' => null,
+        ]);
+    }
+
+    public function legacy(): static
+    {
+        return $this->state(fn (array $attributes): array => [
+            'work_arrangement' => null,
         ]);
     }
 }

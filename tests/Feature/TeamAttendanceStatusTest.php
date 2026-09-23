@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Enums\WorkArrangement;
 use App\Models\AttendanceSession;
 use App\Models\Department;
 use App\Models\Employee;
@@ -25,11 +26,13 @@ class TeamAttendanceStatusTest extends TestCase
         AttendanceSession::factory()->for($working)->open()->create([
             'work_date' => '2026-09-23',
             'time_in_at' => '2026-09-23 22:00:00',
+            'work_arrangement' => WorkArrangement::WorkFromHome,
         ]);
         AttendanceSession::factory()->for($completed)->create([
             'work_date' => '2026-09-24',
             'time_in_at' => '2026-09-24 08:00:00',
             'time_out_at' => '2026-09-24 09:00:00',
+            'work_arrangement' => WorkArrangement::FieldBased,
         ]);
 
         $result = app(TeamAttendanceService::class)->forDepartment($department);
@@ -37,12 +40,31 @@ class TeamAttendanceStatusTest extends TestCase
 
         $this->assertSame(['total' => 3, 'working' => 1, 'completed' => 1, 'not_clocked_in' => 1], $result['summary']);
         $this->assertSame('Working', $members['Working Employee']['status']);
+        $this->assertSame('Work From Home', $members['Working Employee']['work_arrangement']);
         $this->assertSame('Sep 23, 2026', $members['Working Employee']['work_date']);
         $this->assertNull($members['Working Employee']['time_out']);
         $this->assertSame('Completed', $members['Completed Employee']['status']);
+        $this->assertSame('Field-Based', $members['Completed Employee']['work_arrangement']);
         $this->assertSame('Not clocked in', $members['Not Clocked In Employee']['status']);
+        $this->assertNull($members['Not Clocked In Employee']['work_arrangement']);
         $this->assertNull($members['Not Clocked In Employee']['time_in']);
         $this->assertModelExists($notClockedIn);
+    }
+
+    public function test_legacy_team_attendance_session_displays_not_recorded_arrangement(): void
+    {
+        $this->travelTo(CarbonImmutable::parse('2026-09-24 10:00:00', 'Asia/Manila'));
+        $department = Department::factory()->create();
+        $legacyEmployee = $this->employee($department, 'Legacy Employee');
+        AttendanceSession::factory()->legacy()->for($legacyEmployee)->open()->create([
+            'work_date' => '2026-09-23',
+            'time_in_at' => '2026-09-23 22:00:00',
+        ]);
+
+        $result = app(TeamAttendanceService::class)->forDepartment($department);
+
+        $this->assertSame('Working', $result['members'][0]['status']);
+        $this->assertSame('Not recorded', $result['members'][0]['work_arrangement']);
     }
 
     public function test_other_department_and_disabled_employee_attendance_does_not_leak_or_break_workspace(): void

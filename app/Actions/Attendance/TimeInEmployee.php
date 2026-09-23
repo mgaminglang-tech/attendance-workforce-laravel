@@ -5,6 +5,7 @@ namespace App\Actions\Attendance;
 use App\Enums\AccountStatus;
 use App\Enums\EmploymentStatus;
 use App\Enums\UserRole;
+use App\Enums\WorkArrangement;
 use App\Exceptions\AttendanceActionException;
 use App\Models\AttendanceSession;
 use App\Models\Employee;
@@ -14,9 +15,9 @@ use Illuminate\Support\Facades\DB;
 class TimeInEmployee
 {
     /** @throws AttendanceActionException */
-    public function handle(User $user): AttendanceSession
+    public function handle(User $user, WorkArrangement $workArrangement): AttendanceSession
     {
-        return DB::transaction(function () use ($user): AttendanceSession {
+        return DB::transaction(function () use ($user, $workArrangement): AttendanceSession {
             $lockedUser = User::query()->lockForUpdate()->findOrFail($user->getKey());
 
             if (
@@ -50,11 +51,15 @@ class TimeInEmployee
                 throw AttendanceActionException::workDateCompleted();
             }
 
-            return $employee->attendanceSessions()->create([
+            $attendanceSession = new AttendanceSession;
+            $attendanceSession->forceFill([
                 'work_date' => $workDate,
                 'time_in_at' => $timeInAt,
                 'time_out_at' => null,
+                'work_arrangement' => $workArrangement,
             ]);
+
+            return $employee->attendanceSessions()->save($attendanceSession);
         }, attempts: 3);
     }
 }

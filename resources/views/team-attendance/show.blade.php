@@ -27,18 +27,19 @@
         <div class="card border-0 shadow-sm">
             <div class="table-responsive">
                 <table class="table table-hover align-middle mb-0">
-                    <thead class="table-light"><tr><th>Employee</th><th>Status</th><th>Work date</th><th>Time In</th><th>Time Out</th></tr></thead>
+                    <thead class="table-light"><tr><th>Employee</th><th>Status</th><th>Work Arrangement</th><th>Work date</th><th>Time In</th><th>Time Out</th></tr></thead>
                     <tbody data-team-members>
                         @forelse ($teamAttendance['members'] as $member)
                             <tr>
                                 <td><span class="fw-semibold">{{ $member['employee_name'] }}</span><br><span class="small text-body-secondary">{{ $member['employee_number'] }}</span></td>
                                 <td><span class="badge status-badge text-bg-{{ $member['status'] === 'Working' ? 'success' : ($member['status'] === 'Completed' ? 'primary' : 'secondary') }}">{{ $member['status'] }}</span></td>
+                                <td>{{ $member['work_arrangement'] ?? '—' }}</td>
                                 <td>{{ $member['work_date'] ?? '—' }}</td>
                                 <td>{{ $member['time_in'] ?? '—' }}</td>
                                 <td>{{ $member['time_out'] ?? '—' }}</td>
                             </tr>
                         @empty
-                            <tr><td class="text-center text-body-secondary py-5" colspan="5">No active employees are assigned to this department.</td></tr>
+                            <tr><td class="text-center text-body-secondary py-5" colspan="6">No active employees are assigned to this department.</td></tr>
                         @endforelse
                     </tbody>
                 </table>

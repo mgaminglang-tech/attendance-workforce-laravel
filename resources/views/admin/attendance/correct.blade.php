@@ -29,6 +29,7 @@
                                 <p class="detail-label mb-1">Employee</p>
                                 <p class="fw-semibold mb-0">{{ $attendanceSession->employee->user->name }}</p>
                                 <p class="small text-body-secondary mb-0">{{ $attendanceSession->employee->employee_number }}</p>
+                                <p class="small text-body-secondary mb-0">{{ $attendanceSession->work_arrangement?->label() ?? 'Work Arrangement not recorded' }}</p>
                             </div>
                             <div class="text-end">
                                 <p class="detail-label mb-1">Current work date</p>
@@ -53,6 +54,21 @@
                                            value="{{ old('time_in_at', $attendanceSession->time_in_at->format('Y-m-d\TH:i:s')) }}">
                                     <div class="form-text">Asia/Manila time. Work date is derived from this value.</div>
                                     @error('time_in_at')<div class="invalid-feedback">{{ $message }}</div>@enderror
+                                </div>
+                                <div class="col-12">
+                                    <label class="form-label" for="work_arrangement">Corrected Work Arrangement</label>
+                                    <select class="form-select @error('work_arrangement') is-invalid @enderror" id="work_arrangement"
+                                            name="work_arrangement" @required($attendanceSession->work_arrangement !== null)>
+                                        @if ($attendanceSession->work_arrangement === null)
+                                            <option value="">Not recorded (preserve legacy value)</option>
+                                        @endif
+                                        @foreach (\App\Enums\WorkArrangement::cases() as $workArrangement)
+                                            <option value="{{ $workArrangement->value }}" @selected(old('work_arrangement', $attendanceSession->work_arrangement?->value) === $workArrangement->value)>
+                                                {{ $workArrangement->label() }}
+                                            </option>
+                                        @endforeach
+                                    </select>
+                                    @error('work_arrangement')<div class="invalid-feedback">{{ $message }}</div>@enderror
                                 </div>
                                 <div class="col-md-6">
                                     <label class="form-label" for="time_out_at">Corrected Time Out</label>

@@ -65,6 +65,7 @@
                             <th scope="col">Work date</th>
                             <th scope="col">Time In</th>
                             <th scope="col">Time Out</th>
+                            <th scope="col">Work Arrangement</th>
                             <th scope="col">State</th>
                             <th class="text-end" scope="col">Action</th>
                         </tr>
@@ -80,6 +81,7 @@
                                 <td>{{ $attendanceSession->work_date->format('M j, Y') }}</td>
                                 <td>{{ $attendanceSession->time_in_at->format('M j, Y g:i:s A') }}</td>
                                 <td>{{ $attendanceSession->time_out_at?->format('M j, Y g:i:s A') ?? 'Still working' }}</td>
+                                <td>{{ $attendanceSession->work_arrangement?->label() ?? 'Not recorded' }}</td>
                                 <td>
                                     <span class="badge text-bg-{{ $attendanceSession->time_out_at === null ? 'success' : 'secondary' }} status-badge">
                                         {{ $attendanceSession->time_out_at === null ? 'Open' : 'Completed' }}
@@ -91,7 +93,7 @@
                             </tr>
                         @empty
                             <tr>
-                                <td class="text-center text-body-secondary py-5" colspan="7">No attendance records match these filters.</td>
+                                <td class="text-center text-body-secondary py-5" colspan="8">No attendance records match these filters.</td>
                             </tr>
                         @endforelse
                     </tbody>
