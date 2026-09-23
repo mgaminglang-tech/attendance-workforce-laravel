@@ -1,6 +1,8 @@
 <?php
 
 use App\Enums\UserRole;
+use App\Http\Controllers\Admin\AttendanceController as AdminAttendanceController;
+use App\Http\Controllers\Admin\AttendanceCorrectionController;
 use App\Http\Controllers\Admin\DepartmentController;
 use App\Http\Controllers\Admin\EmployeeAccountController;
 use App\Http\Controllers\Admin\EmployeeController;
@@ -42,6 +44,14 @@ Route::middleware(['auth', 'account.active', 'role:'.UserRole::Admin->value])->g
             ->name('employees.invitation.store');
 
         Route::resource('departments', DepartmentController::class)->except(['show', 'destroy']);
+
+        Route::get('attendance', [AdminAttendanceController::class, 'index'])->name('attendance.index');
+        Route::get('attendance/{attendanceSession}', [AdminAttendanceController::class, 'show'])
+            ->name('attendance.show');
+        Route::get('attendance/{attendanceSession}/correction', [AttendanceCorrectionController::class, 'edit'])
+            ->name('attendance.correction.edit');
+        Route::put('attendance/{attendanceSession}/correction', [AttendanceCorrectionController::class, 'update'])
+            ->name('attendance.correction.update');
     });
 });
 

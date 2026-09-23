@@ -7,6 +7,7 @@ use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 #[Fillable(['work_date', 'time_in_at', 'time_out_at'])]
 class AttendanceSession extends Model
@@ -17,6 +18,11 @@ class AttendanceSession extends Model
     public function employee(): BelongsTo
     {
         return $this->belongsTo(Employee::class);
+    }
+
+    public function adjustments(): HasMany
+    {
+        return $this->hasMany(AttendanceAdjustment::class);
     }
 
     public function workedMinutes(): ?int

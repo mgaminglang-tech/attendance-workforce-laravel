@@ -2,6 +2,7 @@
 
 namespace App\Providers;
 
+use App\Enums\AccountStatus;
 use App\Enums\UserRole;
 use App\Models\User;
 use Illuminate\Cache\RateLimiting\Limit;
@@ -28,7 +29,11 @@ class AppServiceProvider extends ServiceProvider
     {
         Paginator::useBootstrapFive();
 
-        Gate::define('manage-workforce', fn (User $user): bool => $user->hasRole(UserRole::Admin));
+        Gate::define(
+            'manage-workforce',
+            fn (User $user): bool => $user->hasRole(UserRole::Admin)
+                && $user->account_status === AccountStatus::Active,
+        );
 
         RateLimiter::for('employee-invitation-resend', function (Request $request): Limit {
             return Limit::perMinute(3)->by('invitation-resend:'.$request->user()->getAuthIdentifier());

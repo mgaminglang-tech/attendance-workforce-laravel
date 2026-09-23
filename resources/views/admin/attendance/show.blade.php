@@ -1,0 +1,78 @@
+@extends('layouts.app')
+
+@section('title', 'Attendance Details | '.config('app.name'))
+
+@section('content')
+    <div class="container py-4 py-md-5">
+        <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3 mb-4">
+            <div>
+                <span class="badge text-bg-secondary mb-2">Attendance record</span>
+                <h1 class="h2 mb-1">{{ $attendanceSession->employee->user->name }}</h1>
+                <p class="text-body-secondary mb-0">{{ $attendanceSession->employee->employee_number }}</p>
+            </div>
+            <div class="d-flex gap-2">
+                <a class="btn btn-outline-secondary" href="{{ route('admin.attendance.index') }}">Back to attendance</a>
+                <a class="btn btn-warning" href="{{ route('admin.attendance.correction.edit', $attendanceSession) }}">Correct attendance</a>
+            </div>
+        </div>
+
+        <div class="card border-0 shadow-sm mb-4">
+            <div class="card-body p-4">
+                @php($workedMinutes = $attendanceSession->workedMinutes())
+                <div class="row g-4">
+                    <div class="col-md-4"><p class="detail-label mb-1">Department</p><p class="mb-0">{{ $attendanceSession->employee->department?->name ?? 'Unassigned' }}</p></div>
+                    <div class="col-md-4"><p class="detail-label mb-1">Work date</p><p class="mb-0">{{ $attendanceSession->work_date->format('M j, Y') }}</p></div>
+                    <div class="col-md-4"><p class="detail-label mb-1">State</p><p class="mb-0">{{ $attendanceSession->time_out_at === null ? 'Open' : 'Completed' }}</p></div>
+                    <div class="col-md-4"><p class="detail-label mb-1">Time In</p><p class="mb-0">{{ $attendanceSession->time_in_at->format('M j, Y g:i:s A') }}</p></div>
+                    <div class="col-md-4"><p class="detail-label mb-1">Time Out</p><p class="mb-0">{{ $attendanceSession->time_out_at?->format('M j, Y g:i:s A') ?? 'Still working' }}</p></div>
+                    <div class="col-md-4"><p class="detail-label mb-1">Duration</p><p class="mb-0">{{ $workedMinutes === null ? 'Open' : intdiv($workedMinutes, 60).'h '.($workedMinutes % 60).'m' }}</p></div>
+                    <div class="col-md-4"><p class="detail-label mb-1">Created</p><p class="mb-0">{{ $attendanceSession->created_at->format('M j, Y g:i:s A') }}</p></div>
+                </div>
+            </div>
+        </div>
+
+        <div class="d-flex justify-content-between align-items-center mb-3">
+            <h2 class="h4 mb-0">Correction history</h2>
+            <span class="badge text-bg-light">{{ $attendanceSession->adjustments->count() }} recorded</span>
+        </div>
+
+        @forelse ($attendanceSession->adjustments as $adjustment)
+            <article class="card border-0 shadow-sm mb-3">
+                <div class="card-body p-4">
+                    <div class="d-flex flex-column flex-md-row justify-content-between gap-2 mb-3">
+                        <div>
+                            <p class="fw-semibold mb-0">{{ $adjustment->administrator->name }}</p>
+                            <p class="small text-body-secondary mb-0">Administrator</p>
+                        </div>
+                        <time class="small text-body-secondary" datetime="{{ $adjustment->corrected_at->toIso8601String() }}">
+                            {{ $adjustment->corrected_at->format('M j, Y g:i:s A') }}
+                        </time>
+                    </div>
+                    <p class="mb-3"><span class="fw-semibold">Reason:</span> {{ $adjustment->reason }}</p>
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <div class="border rounded p-3 h-100">
+                                <p class="detail-label mb-2">Before</p>
+                                <p class="small mb-1">Work date: {{ $adjustment->previous_work_date->format('M j, Y') }}</p>
+                                <p class="small mb-1">Time In: {{ $adjustment->previous_time_in_at->format('M j, Y g:i:s A') }}</p>
+                                <p class="small mb-0">Time Out: {{ $adjustment->previous_time_out_at?->format('M j, Y g:i:s A') ?? 'Open' }}</p>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="border border-primary-subtle bg-primary-subtle rounded p-3 h-100">
+                                <p class="detail-label mb-2">After</p>
+                                <p class="small mb-1">Work date: {{ $adjustment->corrected_work_date->format('M j, Y') }}</p>
+                                <p class="small mb-1">Time In: {{ $adjustment->corrected_time_in_at->format('M j, Y g:i:s A') }}</p>
+                                <p class="small mb-0">Time Out: {{ $adjustment->corrected_time_out_at?->format('M j, Y g:i:s A') ?? 'Open' }}</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </article>
+        @empty
+            <div class="card border-0 shadow-sm">
+                <div class="card-body p-5 text-center text-body-secondary">No corrections have been recorded for this attendance session.</div>
+            </div>
+        @endforelse
+    </div>
+@endsection

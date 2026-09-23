@@ -18,6 +18,7 @@
                     @can('manage-workforce')
                         <a class="link-light text-decoration-none" href="{{ route('admin.employees.index') }}">Employees</a>
                         <a class="link-light text-decoration-none" href="{{ route('admin.departments.index') }}">Departments</a>
+                        <a class="link-light text-decoration-none" href="{{ route('admin.attendance.index') }}">Attendance</a>
                     @endcan
                     @if (auth()->user()->role === \App\Enums\UserRole::Employee)
                         <a class="link-light text-decoration-none" href="{{ route('employee.attendance.index') }}">Attendance</a>

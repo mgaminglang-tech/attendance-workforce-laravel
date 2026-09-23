@@ -19,7 +19,15 @@ if (manilaClock) {
 }
 
 document.querySelectorAll('[data-submit-once]').forEach((form) => {
-    form.addEventListener('submit', () => {
+    form.addEventListener('submit', (event) => {
+        const confirmMessage = form.dataset.confirmMessage;
+
+        if (confirmMessage && !window.confirm(confirmMessage)) {
+            event.preventDefault();
+
+            return;
+        }
+
         const submitButton = form.querySelector('button[type="submit"]');
 
         if (submitButton) {
