@@ -36,6 +36,16 @@ class User extends Authenticatable
         return $this->hasMany(AttendanceAdjustment::class, 'administrator_id');
     }
 
+    public function hrDepartmentAssignment(): HasOne
+    {
+        return $this->hasOne(DepartmentHrAssignment::class);
+    }
+
+    public function hrAssignmentsMade(): HasMany
+    {
+        return $this->hasMany(DepartmentHrAssignment::class, 'assigned_by_user_id');
+    }
+
     public function hasRole(UserRole $role): bool
     {
         return $this->role === $role;

@@ -4,6 +4,7 @@ use App\Enums\UserRole;
 use App\Http\Controllers\Admin\AttendanceController as AdminAttendanceController;
 use App\Http\Controllers\Admin\AttendanceCorrectionController;
 use App\Http\Controllers\Admin\DepartmentController;
+use App\Http\Controllers\Admin\DepartmentHrAssignmentController;
 use App\Http\Controllers\Admin\EmployeeAccountController;
 use App\Http\Controllers\Admin\EmployeeController;
 use App\Http\Controllers\Admin\EmployeeInvitationController;
@@ -13,6 +14,7 @@ use App\Http\Controllers\Employee\AttendanceHistoryController;
 use App\Http\Controllers\Employee\TimeInController;
 use App\Http\Controllers\Employee\TimeOutController;
 use App\Http\Controllers\InvitationController;
+use App\Http\Controllers\TeamAttendanceController;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', function () {
@@ -44,6 +46,17 @@ Route::middleware(['auth', 'account.active', 'role:'.UserRole::Admin->value])->g
             ->name('employees.invitation.store');
 
         Route::resource('departments', DepartmentController::class)->except(['show', 'destroy']);
+        Route::put('departments/{department}/hr-representative', [DepartmentHrAssignmentController::class, 'update'])
+            ->name('departments.hr-representative.update');
+        Route::delete('departments/{department}/hr-representative', [DepartmentHrAssignmentController::class, 'destroy'])
+            ->name('departments.hr-representative.destroy');
+
+        Route::get('team-attendance', [TeamAttendanceController::class, 'adminIndex'])
+            ->name('team-attendance.index');
+        Route::get('departments/{department}/team-attendance', [TeamAttendanceController::class, 'admin'])
+            ->name('departments.team-attendance.show');
+        Route::get('departments/{department}/team-attendance/status', [TeamAttendanceController::class, 'adminStatus'])
+            ->name('departments.team-attendance.status');
 
         Route::get('attendance', [AdminAttendanceController::class, 'index'])->name('attendance.index');
         Route::get('attendance/{attendanceSession}', [AdminAttendanceController::class, 'show'])
@@ -63,6 +76,15 @@ Route::middleware(['auth', 'account.active', 'role:'.UserRole::Employee->value])
         Route::post('/attendance/time-out', TimeOutController::class)->name('attendance.time-out');
         Route::get('/attendance/history', AttendanceHistoryController::class)->name('attendance.history');
     });
+
+    Route::get('/team-attendance', [TeamAttendanceController::class, 'employee'])
+        ->name('team-attendance.index');
+    Route::get('/team-attendance/status', [TeamAttendanceController::class, 'employeeStatus'])
+        ->name('team-attendance.status');
+    Route::get('/hr/team-attendance', [TeamAttendanceController::class, 'hr'])
+        ->name('hr.team-attendance.index');
+    Route::get('/hr/team-attendance/status', [TeamAttendanceController::class, 'hrStatus'])
+        ->name('hr.team-attendance.status');
 });
 
 Route::middleware(['guest', 'throttle:employee-invitation-accept'])->group(function () {

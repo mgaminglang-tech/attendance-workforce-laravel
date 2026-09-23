@@ -7,6 +7,7 @@ use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 
 #[Fillable(['name', 'code', 'is_active'])]
 class Department extends Model
@@ -17,6 +18,11 @@ class Department extends Model
     public function employees(): HasMany
     {
         return $this->hasMany(Employee::class);
+    }
+
+    public function hrAssignment(): HasOne
+    {
+        return $this->hasOne(DepartmentHrAssignment::class);
     }
 
     /**

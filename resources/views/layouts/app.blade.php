@@ -19,11 +19,18 @@
                         <a class="link-light text-decoration-none" href="{{ route('admin.employees.index') }}">Employees</a>
                         <a class="link-light text-decoration-none" href="{{ route('admin.departments.index') }}">Departments</a>
                         <a class="link-light text-decoration-none" href="{{ route('admin.attendance.index') }}">Attendance</a>
+                        <a class="link-light text-decoration-none" href="{{ route('admin.team-attendance.index') }}">Team Attendance</a>
                     @endcan
                     @if (auth()->user()->role === \App\Enums\UserRole::Employee)
                         <a class="link-light text-decoration-none" href="{{ route('employee.attendance.index') }}">Attendance</a>
                         <a class="link-light text-decoration-none" href="{{ route('employee.attendance.history') }}">History</a>
                     @endif
+                    @can('view-own-team-attendance')
+                        <a class="link-light text-decoration-none" href="{{ route('team-attendance.index') }}">Team Attendance</a>
+                    @endcan
+                    @can('view-assigned-team-attendance')
+                        <a class="link-light text-decoration-none" href="{{ route('hr.team-attendance.index') }}">HR Workspace</a>
+                    @endcan
                     <form method="POST" action="{{ route('logout') }}">
                         @csrf
                         <button class="btn btn-sm btn-outline-light" type="submit">Sign out</button>

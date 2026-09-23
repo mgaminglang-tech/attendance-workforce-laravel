@@ -3,6 +3,7 @@
 namespace App\Providers;
 
 use App\Enums\AccountStatus;
+use App\Enums\EmploymentStatus;
 use App\Enums\UserRole;
 use App\Models\User;
 use Illuminate\Cache\RateLimiting\Limit;
@@ -33,6 +34,26 @@ class AppServiceProvider extends ServiceProvider
             'manage-workforce',
             fn (User $user): bool => $user->hasRole(UserRole::Admin)
                 && $user->account_status === AccountStatus::Active,
+        );
+
+        Gate::define(
+            'view-own-team-attendance',
+            fn (User $user): bool => $user->hasRole(UserRole::Employee)
+                && $user->account_status === AccountStatus::Active
+                && $user->employee()
+                    ->where('employment_status', EmploymentStatus::Active->value)
+                    ->whereNotNull('department_id')
+                    ->exists(),
+        );
+
+        Gate::define(
+            'view-assigned-team-attendance',
+            fn (User $user): bool => $user->hasRole(UserRole::Employee)
+                && $user->account_status === AccountStatus::Active
+                && $user->employee()
+                    ->where('employment_status', EmploymentStatus::Active->value)
+                    ->exists()
+                && $user->hrDepartmentAssignment()->exists(),
         );
 
         RateLimiter::for('employee-invitation-resend', function (Request $request): Limit {
