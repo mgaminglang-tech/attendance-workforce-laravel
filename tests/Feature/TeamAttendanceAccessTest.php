@@ -138,7 +138,7 @@ class TeamAttendanceAccessTest extends TestCase
             ->assertSee('HR Representative', false)
             ->assertSee($representative->name)
             ->assertSee($regularUser->name)
-            ->assertSee('7.93 hrs worked')
+            ->assertDontSee('7.93 hrs worked')
             ->assertSee('Not Clocked In')
             ->assertDontSee('Team status');
 
@@ -146,7 +146,7 @@ class TeamAttendanceAccessTest extends TestCase
         $response->assertDontSee('message input')->assertDontSee('Send message');
     }
 
-    public function test_workspace_omits_zero_net_hours_only_from_the_thread_presentation(): void
+    public function test_workspace_omits_net_hours_only_from_the_thread_presentation(): void
     {
         $this->travelTo(CarbonImmutable::parse('2026-09-24 18:00:00', 'Asia/Manila'));
         $department = Department::factory()->create();
@@ -154,8 +154,8 @@ class TeamAttendanceAccessTest extends TestCase
         [, $employee] = $this->employeeIn($department);
         AttendanceSession::factory()->for($employee)->create([
             'work_date' => '2026-09-24',
-            'time_in_at' => '2026-09-24 14:40:00',
-            'time_out_at' => '2026-09-24 15:40:00',
+            'time_in_at' => '2026-09-24 08:00:00',
+            'time_out_at' => '2026-09-24 16:00:00',
             'work_arrangement' => WorkArrangement::WorkFromHome,
         ]);
 
@@ -164,8 +164,8 @@ class TeamAttendanceAccessTest extends TestCase
         $response->assertOk()
             ->assertSee('Timed out')
             ->assertSee('Work From Home')
-            ->assertDontSee('0.00 hrs worked');
-        $this->assertStringContainsString('"net_hours":"0.00 hrs"', $response->getContent());
+            ->assertDontSee('7.00 hrs worked');
+        $this->assertStringContainsString('"net_hours":"7.00 hrs"', $response->getContent());
     }
 
     /** @return array{User, Employee} */

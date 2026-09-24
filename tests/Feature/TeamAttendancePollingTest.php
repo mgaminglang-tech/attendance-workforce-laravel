@@ -67,7 +67,8 @@ class TeamAttendancePollingTest extends TestCase
 
         $this->assertIsString($javascript);
         $this->assertStringContainsString('renderActivity(data.activity)', $javascript);
-        $this->assertStringContainsString('Number.parseFloat(event.net_hours) > 0', $javascript);
+        $this->assertStringContainsString('arrangement.textContent = event.work_arrangement', $javascript);
+        $this->assertStringNotContainsString('event.net_hours', $javascript);
         $this->assertStringContainsString('window.setInterval(refreshTeamAttendance, 20000)', $javascript);
         $this->assertStringNotContainsString('window.location.reload', $javascript);
     }

@@ -1301,8 +1301,7 @@ legend {
 }
 
 .hr-badge,
-.arrangement-chip,
-.net-hours {
+.arrangement-chip {
     display: inline-flex;
     align-items: center;
     border-radius: 999px;
@@ -1323,10 +1322,6 @@ legend {
     border: 1px solid #cedce2;
     background: #f4f7f8;
     color: #365c70;
-}
-
-.net-hours {
-    color: #3f5362;
 }
 
 .feed-empty-state {

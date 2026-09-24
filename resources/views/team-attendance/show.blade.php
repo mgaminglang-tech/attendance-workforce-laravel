@@ -48,14 +48,9 @@
                                 @endif
                             </div>
                             <p class="attendance-event-action mb-0">{{ $event['event'] }}</p>
-                            @if ($event['work_arrangement'] !== null || ($event['net_hours'] !== null && $event['net_hours'] !== '0.00 hrs'))
+                            @if ($event['work_arrangement'] !== null)
                                 <div class="attendance-event-meta">
-                                    @if ($event['work_arrangement'] !== null)
-                                        <span class="arrangement-chip">{{ $event['work_arrangement'] }}</span>
-                                    @endif
-                                    @if ($event['net_hours'] !== null && $event['net_hours'] !== '0.00 hrs')
-                                        <span class="net-hours">{{ $event['net_hours'] }} worked</span>
-                                    @endif
+                                    <span class="arrangement-chip">{{ $event['work_arrangement'] }}</span>
                                 </div>
                             @endif
                         </div>

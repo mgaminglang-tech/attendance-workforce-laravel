@@ -343,13 +343,6 @@ if (teamAttendance) {
                 meta.append(arrangement);
             }
 
-            if (event.net_hours && Number.parseFloat(event.net_hours) > 0) {
-                const netHours = document.createElement('span');
-                netHours.className = 'net-hours';
-                netHours.textContent = `${event.net_hours} worked`;
-                meta.append(netHours);
-            }
-
             if (meta.childElementCount > 0) {
                 content.append(meta);
             }
