@@ -9,32 +9,40 @@
 </head>
 <body class="bg-body-tertiary">
     @auth
-        <nav class="navbar navbar-dark app-navbar shadow-sm">
+        <nav class="navbar navbar-expand-lg navbar-dark app-navbar shadow-sm">
             <div class="container">
                 <a class="navbar-brand fw-semibold" href="{{ route(auth()->user()->role->dashboardRouteName()) }}">
                     Workforce Management
                 </a>
-                <div class="d-flex align-items-center gap-3">
+                <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#main-navigation"
+                        aria-controls="main-navigation" aria-expanded="false" aria-label="Toggle navigation">
+                    <span class="navbar-toggler-icon"></span>
+                </button>
+                <div class="collapse navbar-collapse" id="main-navigation">
+                    <div class="navbar-nav ms-auto align-items-lg-center gap-lg-3 py-3 py-lg-0">
                     @can('manage-workforce')
-                        <a class="link-light text-decoration-none" href="{{ route('admin.employees.index') }}">Employees</a>
-                        <a class="link-light text-decoration-none" href="{{ route('admin.departments.index') }}">Departments</a>
-                        <a class="link-light text-decoration-none" href="{{ route('admin.attendance.index') }}">Attendance</a>
-                        <a class="link-light text-decoration-none" href="{{ route('admin.team-attendance.index') }}">Team Attendance</a>
+                        <a class="nav-link" href="{{ route('admin.employees.index') }}">Employees</a>
+                        <a class="nav-link" href="{{ route('admin.departments.index') }}">Departments</a>
+                        <a class="nav-link" href="{{ route('admin.attendance.index') }}">Attendance</a>
+                        <a class="nav-link" href="{{ route('admin.team-attendance.index') }}">Team Attendance</a>
+                        <a class="nav-link" href="{{ route('admin.dtr.index') }}">DTR</a>
                     @endcan
                     @if (auth()->user()->role === \App\Enums\UserRole::Employee)
-                        <a class="link-light text-decoration-none" href="{{ route('employee.attendance.index') }}">Attendance</a>
-                        <a class="link-light text-decoration-none" href="{{ route('employee.attendance.history') }}">History</a>
+                        <a class="nav-link" href="{{ route('employee.attendance.index') }}">Attendance</a>
+                        <a class="nav-link" href="{{ route('employee.attendance.history') }}">History</a>
+                        <a class="nav-link" href="{{ route('employee.dtr.index') }}">DTR</a>
                     @endif
                     @can('view-own-team-attendance')
-                        <a class="link-light text-decoration-none" href="{{ route('team-attendance.index') }}">Team Attendance</a>
+                        <a class="nav-link" href="{{ route('team-attendance.index') }}">Team Attendance</a>
                     @endcan
                     @can('view-assigned-team-attendance')
-                        <a class="link-light text-decoration-none" href="{{ route('hr.team-attendance.index') }}">HR Workspace</a>
+                        <a class="nav-link" href="{{ route('hr.team-attendance.index') }}">HR Workspace</a>
                     @endcan
                     <form method="POST" action="{{ route('logout') }}">
                         @csrf
                         <button class="btn btn-sm btn-outline-light" type="submit">Sign out</button>
                     </form>
+                    </div>
                 </div>
             </div>
         </nav>

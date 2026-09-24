@@ -5,12 +5,14 @@ use App\Http\Controllers\Admin\AttendanceController as AdminAttendanceController
 use App\Http\Controllers\Admin\AttendanceCorrectionController;
 use App\Http\Controllers\Admin\DepartmentController;
 use App\Http\Controllers\Admin\DepartmentHrAssignmentController;
+use App\Http\Controllers\Admin\DtrController as AdminDtrController;
 use App\Http\Controllers\Admin\EmployeeAccountController;
 use App\Http\Controllers\Admin\EmployeeController;
 use App\Http\Controllers\Admin\EmployeeInvitationController;
 use App\Http\Controllers\Auth\AuthenticatedSessionController;
 use App\Http\Controllers\Employee\AttendanceController;
 use App\Http\Controllers\Employee\AttendanceHistoryController;
+use App\Http\Controllers\Employee\DtrController as EmployeeDtrController;
 use App\Http\Controllers\Employee\TimeInController;
 use App\Http\Controllers\Employee\TimeOutController;
 use App\Http\Controllers\InvitationController;
@@ -65,6 +67,10 @@ Route::middleware(['auth', 'account.active', 'role:'.UserRole::Admin->value])->g
             ->name('attendance.correction.edit');
         Route::put('attendance/{attendanceSession}/correction', [AttendanceCorrectionController::class, 'update'])
             ->name('attendance.correction.update');
+
+        Route::get('dtr', [AdminDtrController::class, 'index'])->name('dtr.index');
+        Route::get('dtr/preview', [AdminDtrController::class, 'preview'])->name('dtr.preview');
+        Route::get('dtr/pdf', [AdminDtrController::class, 'pdf'])->name('dtr.pdf');
     });
 });
 
@@ -75,6 +81,9 @@ Route::middleware(['auth', 'account.active', 'role:'.UserRole::Employee->value])
         Route::post('/attendance/time-in', TimeInController::class)->name('attendance.time-in');
         Route::post('/attendance/time-out', TimeOutController::class)->name('attendance.time-out');
         Route::get('/attendance/history', AttendanceHistoryController::class)->name('attendance.history');
+        Route::get('/dtr', [EmployeeDtrController::class, 'index'])->name('dtr.index');
+        Route::get('/dtr/preview', [EmployeeDtrController::class, 'preview'])->name('dtr.preview');
+        Route::get('/dtr/pdf', [EmployeeDtrController::class, 'pdf'])->name('dtr.pdf');
     });
 
     Route::get('/team-attendance', [TeamAttendanceController::class, 'employee'])

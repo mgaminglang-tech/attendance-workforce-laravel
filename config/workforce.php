@@ -1,6 +1,10 @@
 <?php
 
 return [
+    'dtr' => [
+        'break_minutes' => 60,
+    ],
+
     'invitations' => [
         'expiration_minutes' => (int) env('EMPLOYEE_INVITATION_EXPIRATION_MINUTES', 2880),
         'resend_cooldown_seconds' => (int) env('EMPLOYEE_INVITATION_RESEND_COOLDOWN_SECONDS', 60),

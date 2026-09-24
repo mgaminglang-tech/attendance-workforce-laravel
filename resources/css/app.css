@@ -76,3 +76,27 @@ body {
     place-items: center;
     white-space: normal;
 }
+
+.dtr-preview-table {
+    max-height: 70vh;
+}
+
+.dtr-preview-table th,
+.dtr-preview-table td {
+    min-width: 7rem;
+}
+
+.dtr-preview-table th:first-child,
+.dtr-preview-table td:first-child {
+    left: 0;
+    position: sticky;
+    z-index: 1;
+}
+
+.dtr-preview-table thead th:first-child {
+    z-index: 2;
+}
+
+.dtr-preview-table tbody th:first-child {
+    background-color: var(--bs-body-bg);
+}
