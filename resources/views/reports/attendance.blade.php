@@ -3,8 +3,8 @@
 @section('title', 'Attendance Reports | '.config('app.name'))
 
 @section('content')
-    <div class="container-xxl page-shell">
-        <header class="page-header d-flex flex-column flex-lg-row justify-content-between gap-3">
+    <div class="container-xxl page-shell reports-page">
+        <header class="page-header page-header-action">
             <div>
                 <span class="eyebrow">{{ $scopeLabel }}</span>
                 <h1 class="h2 mb-1">Attendance Reports</h1>
@@ -16,6 +16,9 @@
                     @endif
                 </p>
             </div>
+            <button class="btn btn-outline-primary" type="button" data-bs-toggle="modal" data-bs-target="#bulk-dtr-modal">
+                <i class="ti ti-file-zip me-2" aria-hidden="true"></i>Bulk DTR Download
+            </button>
         </header>
 
         @if ($errors->any())
@@ -163,36 +166,50 @@
             @endif
         </div>
 
-        <section class="card surface-card department-workspace-card" aria-labelledby="bulk-dtr-heading">
-            <div class="card-body p-3 p-md-4">
-                <h2 class="h4 mb-1" id="bulk-dtr-heading">Bulk Department DTR Download</h2>
-                <p class="text-body-secondary">Download one monthly PDF per department employee in a private ZIP archive.</p>
-                <form class="row g-3 align-items-end" method="GET" action="{{ $bulkRoute }}">
-                    @if ($isAdmin)
-                        <div class="col-12 col-md-6 col-lg-5">
-                            <label class="form-label" for="bulk-department">Department</label>
-                            <select class="form-select form-select-lg" id="bulk-department" name="department" required>
-                                <option value="">Select a department</option>
-                                @foreach ($departments as $departmentOption)
-                                    <option value="{{ $departmentOption->id }}">{{ $departmentOption->name }}</option>
-                                @endforeach
-                            </select>
+        <div class="modal fade" id="bulk-dtr-modal" tabindex="-1" aria-labelledby="bulk-dtr-heading" aria-hidden="true"
+             data-open-modal-on-load="{{ $errors->has('month') || ($errors->has('department') && old('month')) ? 'true' : 'false' }}">
+            <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable">
+                <div class="modal-content">
+                    <form method="GET" action="{{ $bulkRoute }}">
+                        <div class="modal-header">
+                            <div>
+                                <p class="eyebrow mb-1">Private ZIP archive</p>
+                                <h2 class="modal-title" id="bulk-dtr-heading">Bulk Department DTR Download</h2>
+                            </div>
+                            <button class="btn-close" type="button" data-bs-dismiss="modal" aria-label="Close"></button>
                         </div>
-                    @else
-                        <div class="col-12 col-md-6 col-lg-5">
-                            <p class="detail-label mb-1">Authorized Department</p>
-                            <p class="form-control-plaintext fw-semibold mb-0">{{ $department->name }}</p>
+                        <div class="modal-body">
+                            <p class="text-body-secondary mt-0 mb-4">Download one monthly PDF per department employee.</p>
+                            @if ($isAdmin)
+                                <div class="mb-3">
+                                    <label class="form-label" for="bulk-department">Department</label>
+                                    <select class="form-select form-select-lg @error('department') is-invalid @enderror" id="bulk-department" name="department" required
+                                            @error('department') aria-describedby="bulk-department-error" @enderror>
+                                        <option value="">Select a department</option>
+                                        @foreach ($departments as $departmentOption)
+                                            <option value="{{ $departmentOption->id }}" @selected((string) old('department') === (string) $departmentOption->id)>{{ $departmentOption->name }}</option>
+                                        @endforeach
+                                    </select>
+                                    @error('department')<div class="invalid-feedback" id="bulk-department-error">{{ $message }}</div>@enderror
+                                </div>
+                            @else
+                                <div class="bulk-department-context">
+                                    <label class="form-label" for="bulk-department">Department</label>
+                                    <select class="form-select" id="bulk-department" aria-describedby="bulk-department-help" disabled>
+                                        <option selected>{{ $department->name }}</option>
+                                    </select>
+                                    <div class="form-text" id="bulk-department-help">Fixed to your assigned department.</div>
+                                </div>
+                            @endif
+                            @include('dtr._month-picker', ['id' => 'bulk-month', 'value' => old('month', $selectedMonth)])
                         </div>
-                    @endif
-                    <div class="col-12 col-md-6 col-lg-3">
-                        <label class="form-label" for="bulk-month">Month</label>
-                        <input class="form-control form-control-lg" id="bulk-month" name="month" type="month" required value="{{ $selectedMonth }}">
-                    </div>
-                    <div class="col-12 col-lg-auto">
-                        <button class="btn btn-workforce btn-lg w-100" type="submit">Download Department DTRs</button>
-                    </div>
-                </form>
+                        <div class="modal-footer">
+                            <button class="btn btn-outline-secondary" type="button" data-bs-dismiss="modal">Cancel</button>
+                            <button class="btn btn-workforce" type="submit">Download Department DTRs</button>
+                        </div>
+                    </form>
+                </div>
             </div>
-        </section>
+        </div>
     </div>
 @endsection

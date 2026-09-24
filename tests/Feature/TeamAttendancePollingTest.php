@@ -48,16 +48,28 @@ class TeamAttendancePollingTest extends TestCase
         ]))->assertOk()->assertJsonPath('department.name', 'Finance');
         $payload = $response->json();
 
-        $this->assertSame(['department', 'summary', 'members', 'last_updated'], array_keys($payload));
+        $this->assertSame(['department', 'summary', 'activity', 'last_updated'], array_keys($payload));
         $this->assertSame(
-            ['employee_name', 'employee_number', 'status', 'work_arrangement', 'time_in', 'time_out', 'work_date'],
-            array_keys($payload['members'][0]),
+            ['employee_name', 'employee_initials', 'is_hr_representative', 'work_arrangement', 'event', 'event_time', 'occurred_at', 'date_label', 'net_hours'],
+            array_keys($payload['activity'][0]),
         );
-        $this->assertContains('Finance Member', array_column($payload['members'], 'employee_name'));
-        $this->assertContains('Office-Based', array_column($payload['members'], 'work_arrangement'));
-        $this->assertNotContains('IT Private Member', array_column($payload['members'], 'employee_name'));
-        $this->assertArrayNotHasKey('email', $payload['members'][0]);
-        $this->assertArrayNotHasKey('correction_reason', $payload['members'][0]);
+        $this->assertContains('Finance Member', array_column($payload['activity'], 'employee_name'));
+        $this->assertContains('Office-Based', array_column($payload['activity'], 'work_arrangement'));
+        $this->assertContains('Not Clocked In', array_column($payload['activity'], 'event'));
+        $this->assertNotContains('IT Private Member', array_column($payload['activity'], 'employee_name'));
+        $this->assertArrayNotHasKey('email', $payload['activity'][0]);
+        $this->assertArrayNotHasKey('correction_reason', $payload['activity'][0]);
+    }
+
+    public function test_team_attendance_refreshes_the_activity_feed_on_the_existing_interval(): void
+    {
+        $javascript = file_get_contents(resource_path('js/app.js'));
+
+        $this->assertIsString($javascript);
+        $this->assertStringContainsString('renderActivity(data.activity)', $javascript);
+        $this->assertStringContainsString('Number.parseFloat(event.net_hours) > 0', $javascript);
+        $this->assertStringContainsString('window.setInterval(refreshTeamAttendance, 20000)', $javascript);
+        $this->assertStringNotContainsString('window.location.reload', $javascript);
     }
 
     public function test_hr_polling_uses_assignment_scope_instead_of_employee_department(): void

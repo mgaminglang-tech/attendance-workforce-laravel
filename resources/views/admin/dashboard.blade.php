@@ -3,80 +3,79 @@
 @section('title', 'Global Admin Dashboard | '.config('app.name'))
 
 @section('content')
-    <div class="container-xxl page-shell">
-        <header class="page-header d-flex flex-column flex-lg-row justify-content-between align-items-lg-end gap-3">
+    <div class="container-xxl page-shell admin-dashboard-page">
+        <header class="page-header">
             <div>
                 <span class="eyebrow">Global Admin</span>
-                <h1 class="h2 mb-1">Global Admin Dashboard</h1>
-                <p class="text-body-secondary mb-0">Workforce activity for the current Manila work date, {{ $workDate }}.</p>
+                <h1>Workforce today</h1>
+                <p>Operational attendance for {{ \Carbon\CarbonImmutable::parse($workDate)->format('F j, Y') }}.</p>
             </div>
-            <a class="btn btn-workforce" href="{{ route('admin.employees.create') }}">Add Employee</a>
         </header>
 
-        <section class="row g-3 mb-4" aria-label="Workforce summary">
+        <section class="workforce-kpis" aria-label="Workforce overview">
             @foreach ([
-                ['label' => 'Total Employees', 'value' => $summary['employees'], 'class' => ''],
-                ['label' => 'Working Now', 'value' => $summary['working'], 'class' => 'text-success'],
-                ['label' => 'Completed Today', 'value' => $summary['completed_today'], 'class' => ''],
-                ['label' => 'Active Departments', 'value' => $summary['active_departments'], 'class' => ''],
+                ['label' => 'Total employees', 'value' => $summary['employees'], 'icon' => 'ti-users'],
+                ['label' => 'Working', 'value' => $summary['working'], 'icon' => 'ti-clock-play'],
+                ['label' => 'Completed', 'value' => $summary['completed_today'], 'icon' => 'ti-circle-check'],
+                ['label' => 'Not clocked in', 'value' => $summary['not_clocked_in'], 'icon' => 'ti-clock-off'],
             ] as $metric)
-                <div class="col-6 col-xl-3">
-                    <div class="card metric-card h-100">
-                        <div class="card-body">
-                            <p class="detail-label mb-1">{{ $metric['label'] }}</p>
-                            <p class="metric-value {{ $metric['class'] }}">{{ $metric['value'] }}</p>
-                        </div>
-                    </div>
+                <div class="workforce-kpi">
+                    <i class="ti {{ $metric['icon'] }}" aria-hidden="true"></i>
+                    <span><strong>{{ $metric['value'] }}</strong>{{ $metric['label'] }}</span>
                 </div>
             @endforeach
         </section>
 
-        <div class="row g-4">
-            <div class="col-xl-8">
-                <section class="card surface-card h-100" aria-labelledby="recent-attendance-heading">
-                    <div class="card-header bg-white border-bottom d-flex justify-content-between align-items-center gap-3 py-3 px-4">
-                        <div>
-                            <h2 class="h5 mb-0" id="recent-attendance-heading">Recent attendance</h2>
-                            <p class="small text-body-secondary mb-0">Latest recorded workforce sessions.</p>
+        <div class="dashboard-grid">
+            <section class="dashboard-section" aria-labelledby="today-activity-heading">
+                <div class="section-heading">
+                    <div>
+                        <p class="eyebrow mb-1">Organization</p>
+                        <h2 id="today-activity-heading">Today’s activity</h2>
+                    </div>
+                    <a class="section-link" href="{{ route('admin.attendance.index') }}">View attendance<i class="ti ti-arrow-right" aria-hidden="true"></i></a>
+                </div>
+                <div class="admin-activity-list">
+                    @forelse ($recentSessions as $session)
+                        <div class="admin-activity-item">
+                            <span class="activity-icon {{ $session->time_out_at === null ? 'activity-icon-working' : 'activity-icon-completed' }}" aria-hidden="true">
+                                <i class="ti {{ $session->time_out_at === null ? 'ti-clock-play' : 'ti-clock-check' }}"></i>
+                            </span>
+                            <span class="admin-activity-copy">
+                                <strong>{{ $session->employee->user->name }}</strong>
+                                <span>{{ $session->time_out_at === null ? 'Timed in' : 'Timed out' }} · {{ $session->employee->department?->name ?? 'Unassigned' }}</span>
+                            </span>
+                            <time datetime="{{ ($session->time_out_at ?? $session->time_in_at)->toIso8601String() }}">{{ ($session->time_out_at ?? $session->time_in_at)->format('g:i A') }}</time>
                         </div>
-                        <a class="btn btn-sm btn-outline-primary" href="{{ route('admin.attendance.index') }}">View all</a>
+                    @empty
+                        <p class="empty-state mb-0">No attendance activity recorded for today.</p>
+                    @endforelse
+                </div>
+            </section>
+
+            <section class="dashboard-section" aria-labelledby="department-overview-heading">
+                <div class="section-heading">
+                    <div>
+                        <p class="eyebrow mb-1">Teams</p>
+                        <h2 id="department-overview-heading">Department overview</h2>
                     </div>
-                    <div class="table-responsive">
-                        <table class="table table-hover align-middle mb-0">
-                            <thead class="table-light">
-                                <tr><th scope="col">Employee</th><th scope="col">Department</th><th scope="col">Work date</th><th scope="col">Status</th></tr>
-                            </thead>
-                            <tbody>
-                                @forelse ($recentSessions as $session)
-                                    <tr>
-                                        <td><span class="fw-semibold">{{ $session->employee->user->name }}</span><span class="d-block small text-body-secondary">{{ $session->employee->employee_number }}</span></td>
-                                        <td>{{ $session->employee->department?->name ?? 'Unassigned' }}</td>
-                                        <td>{{ $session->work_date->format('M j, Y') }}</td>
-                                        <td><span class="badge status-badge {{ $session->time_out_at === null ? 'status-badge-working' : 'status-badge-completed' }}">{{ $session->time_out_at === null ? 'Working' : 'Completed' }}</span></td>
-                                    </tr>
-                                @empty
-                                    <tr><td class="empty-state" colspan="4">No attendance records found.</td></tr>
-                                @endforelse
-                            </tbody>
-                        </table>
-                    </div>
-                </section>
-            </div>
-            <div class="col-xl-4">
-                <section class="card surface-card h-100" aria-labelledby="quick-actions-heading">
-                    <div class="card-body p-4">
-                        <p class="detail-label mb-1">Shortcuts</p>
-                        <h2 class="h5 mb-3" id="quick-actions-heading">Quick actions</h2>
-                        <div class="d-grid gap-2">
-                            <a class="btn btn-outline-primary text-start" href="{{ route('admin.employees.index') }}">Manage Employees</a>
-                            <a class="btn btn-outline-primary text-start" href="{{ route('admin.departments.index') }}">Manage Departments</a>
-                            <a class="btn btn-outline-primary text-start" href="{{ route('admin.team-attendance.index') }}">Team Attendance</a>
-                            <a class="btn btn-outline-primary text-start" href="{{ route('admin.dtr.index') }}">Employee DTR</a>
-                            <a class="btn btn-outline-primary text-start" href="{{ route('admin.reports.attendance.index') }}">Attendance Reports</a>
-                        </div>
-                    </div>
-                </section>
-            </div>
+                </div>
+                <div class="department-overview-list">
+                    @forelse ($departments as $department)
+                        <a class="department-overview-item" href="{{ route('admin.departments.team-attendance.show', $department) }}">
+                            <span class="department-avatar" aria-hidden="true">{{ \Illuminate\Support\Str::upper(\Illuminate\Support\Str::substr($department->name, 0, 2)) }}</span>
+                            <span class="department-overview-copy">
+                                <strong>{{ $department->name }}</strong>
+                                <small>{{ $department->employees_count }} {{ \Illuminate\Support\Str::plural('member', $department->employees_count) }} · {{ $department->working_count }} working</small>
+                            </span>
+                            <span class="department-state">{{ $department->working_count > 0 ? 'Active now' : 'No active sessions' }}</span>
+                            <i class="ti ti-chevron-right" aria-hidden="true"></i>
+                        </a>
+                    @empty
+                        <p class="empty-state mb-0">No active departments found.</p>
+                    @endforelse
+                </div>
+            </section>
         </div>
     </div>
 @endsection

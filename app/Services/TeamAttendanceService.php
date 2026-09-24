@@ -6,15 +6,19 @@ use App\Enums\AccountStatus;
 use App\Enums\EmploymentStatus;
 use App\Models\AttendanceSession;
 use App\Models\Department;
+use App\Models\Employee;
 use Carbon\CarbonImmutable;
+use Illuminate\Support\Str;
 
 class TeamAttendanceService
 {
+    public function __construct(private CalculateNetAttendanceMinutes $calculateNetAttendanceMinutes) {}
+
     /**
      * @return array{
      *     department: array{id: int, name: string},
      *     summary: array{total: int, working: int, completed: int, not_clocked_in: int},
-     *     members: list<array{employee_name: string, employee_number: string, status: string, work_arrangement: ?string, time_in: ?string, time_out: ?string, work_date: ?string}>,
+     *     activity: list<array{employee_name: string, employee_initials: string, is_hr_representative: bool, event: string, event_time: ?string, occurred_at: ?string, date_label: string, work_arrangement: ?string, net_hours: ?string}>,
      *     last_updated: string
      * }
      */
@@ -22,9 +26,10 @@ class TeamAttendanceService
     {
         $now = CarbonImmutable::now(config('app.timezone'));
         $workDate = $now->toDateString();
+        $department->loadMissing('hrAssignment');
 
         $employees = $department->employees()
-            ->select(['id', 'user_id', 'employee_number', 'department_id'])
+            ->select(['id', 'user_id', 'department_id'])
             ->where('employment_status', EmploymentStatus::Active->value)
             ->whereHas('user', fn ($query) => $query->where('account_status', AccountStatus::Active->value))
             ->with([
@@ -40,43 +45,128 @@ class TeamAttendanceService
             ->orderBy('employee_number')
             ->get();
 
-        $members = $employees->map(function ($employee) use ($workDate): array {
-            $openSession = $employee->attendanceSessions->first(
-                fn (AttendanceSession $session): bool => $session->time_out_at === null,
-            );
-            $currentSession = $openSession ?? $employee->attendanceSessions->first(
-                fn (AttendanceSession $session): bool => $session->work_date->toDateString() === $workDate
-                    && $session->time_out_at !== null,
-            );
+        $employeeStates = $employees->map(function (Employee $employee) use ($workDate): array {
+            $openSession = $this->openSession($employee);
+            $currentSession = $openSession ?? $this->completedSessionForWorkDate($employee, $workDate);
             $status = match (true) {
                 $openSession !== null => 'Working',
                 $currentSession !== null => 'Completed',
                 default => 'Not clocked in',
             };
 
-            return [
-                'employee_name' => $employee->user->name,
-                'employee_number' => $employee->employee_number,
-                'status' => $status,
-                'work_arrangement' => $currentSession === null
-                    ? null
-                    : ($currentSession->work_arrangement?->label() ?? 'Not recorded'),
-                'time_in' => $currentSession?->time_in_at->format('M j, Y g:i:s A'),
-                'time_out' => $currentSession?->time_out_at?->format('M j, Y g:i:s A'),
-                'work_date' => $currentSession?->work_date->format('M j, Y'),
-            ];
-        })->values();
+            return compact('employee', 'currentSession', 'status');
+        });
+
+        $activityEvents = $employeeStates
+            ->flatMap(fn (array $state): array => $this->activityEvents(
+                $state['employee'],
+                $state['currentSession'],
+                $department->hrAssignment?->user_id,
+                $now,
+            ));
+        $activity = $activityEvents
+            ->where('date_label', 'Today')
+            ->sortByDesc('occurred_at')
+            ->concat(
+                $activityEvents
+                    ->where('date_label', '!=', 'Today')
+                    ->sortByDesc('occurred_at'),
+            )
+            ->values();
 
         return [
             'department' => ['id' => $department->getKey(), 'name' => $department->name],
             'summary' => [
-                'total' => $members->count(),
-                'working' => $members->where('status', 'Working')->count(),
-                'completed' => $members->where('status', 'Completed')->count(),
-                'not_clocked_in' => $members->where('status', 'Not clocked in')->count(),
+                'total' => $employeeStates->count(),
+                'working' => $employeeStates->where('status', 'Working')->count(),
+                'completed' => $employeeStates->where('status', 'Completed')->count(),
+                'not_clocked_in' => $employeeStates->where('status', 'Not clocked in')->count(),
             ],
-            'members' => $members->all(),
+            'activity' => $activity->all(),
             'last_updated' => $now->format('M j, Y g:i:s A'),
         ];
+    }
+
+    private function openSession(Employee $employee): ?AttendanceSession
+    {
+        return $employee->attendanceSessions->first(
+            fn (AttendanceSession $session): bool => $session->time_out_at === null,
+        );
+    }
+
+    private function completedSessionForWorkDate(Employee $employee, string $workDate): ?AttendanceSession
+    {
+        return $employee->attendanceSessions->first(
+            fn (AttendanceSession $session): bool => $session->work_date->toDateString() === $workDate
+                && $session->time_out_at !== null,
+        );
+    }
+
+    /**
+     * @return list<array{employee_name: string, employee_initials: string, is_hr_representative: bool, event: string, event_time: ?string, occurred_at: ?string, date_label: string, work_arrangement: ?string, net_hours: ?string}>
+     */
+    private function activityEvents(
+        Employee $employee,
+        ?AttendanceSession $session,
+        ?int $hrRepresentativeUserId,
+        CarbonImmutable $now,
+    ): array {
+        $employeeName = $employee->user->name;
+        $shared = [
+            'employee_name' => $employeeName,
+            'employee_initials' => $this->initials($employeeName),
+            'is_hr_representative' => $employee->user_id === $hrRepresentativeUserId,
+        ];
+
+        if ($session === null) {
+            return [[
+                ...$shared,
+                'event' => 'Not Clocked In',
+                'event_time' => null,
+                'occurred_at' => null,
+                'date_label' => 'Today',
+                'work_arrangement' => null,
+                'net_hours' => null,
+            ]];
+        }
+
+        $shared['work_arrangement'] = $session->work_arrangement?->label() ?? 'Not recorded';
+        $events = [
+            [...$shared, ...$this->eventDetails('Timed in', $session->time_in_at, $now), 'net_hours' => null],
+        ];
+
+        if ($session->time_out_at !== null) {
+            $netMinutes = $this->calculateNetAttendanceMinutes->handle($session);
+            $events[] = [
+                ...$shared,
+                ...$this->eventDetails('Timed out', $session->time_out_at, $now),
+                'net_hours' => $netMinutes === null
+                    ? null
+                    : number_format($netMinutes / 60, 2, '.', '').' hrs',
+            ];
+        }
+
+        return $events;
+    }
+
+    /** @return array{event: string, event_time: string, occurred_at: string, date_label: string} */
+    private function eventDetails(string $event, CarbonImmutable $occurredAt, CarbonImmutable $now): array
+    {
+        return [
+            'event' => $event,
+            'event_time' => $occurredAt->format('g:i A'),
+            'occurred_at' => $occurredAt->toIso8601String(),
+            'date_label' => $occurredAt->isSameDay($now) ? 'Today' : $occurredAt->format('M j, Y'),
+        ];
+    }
+
+    private function initials(string $name): string
+    {
+        return Str::of($name)
+            ->squish()
+            ->explode(' ')
+            ->take(2)
+            ->map(fn (string $part): string => Str::upper(Str::substr($part, 0, 1)))
+            ->implode('');
     }
 }

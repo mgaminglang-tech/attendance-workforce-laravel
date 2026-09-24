@@ -3,60 +3,67 @@
 @section('title', 'Employee Dashboard | '.config('app.name'))
 
 @section('content')
-    <div class="container-xxl page-shell">
-        <header class="page-header">
-            <span class="eyebrow">Employee self-service</span>
-            <h1 class="h2 mb-1">Employee Dashboard</h1>
-            <p class="text-body-secondary mb-0">Welcome, {{ auth()->user()->name }}. Today is {{ now(config('app.timezone'))->format('l, F j, Y') }}.</p>
+    <div class="container-xl page-shell employee-dashboard">
+        <header class="employee-identity">
+            <span class="avatar employee-identity-avatar" aria-hidden="true">{{ \Illuminate\Support\Str::of(auth()->user()->name)->squish()->explode(' ')->take(2)->map(fn ($part) => \Illuminate\Support\Str::upper(\Illuminate\Support\Str::substr($part, 0, 1)))->implode('') }}</span>
+            <div>
+                <p class="eyebrow mb-1">{{ now(config('app.timezone'))->format('l, F j') }}</p>
+                <h1>{{ auth()->user()->name }}</h1>
+                <p>{{ $employee?->department?->name ?? 'Department not assigned' }}@if ($employee?->job_title) · {{ $employee->job_title }}@endif</p>
+            </div>
         </header>
 
         @if ($errors->has('attendance'))
             <div class="alert alert-danger" role="alert">{{ $errors->first('attendance') }}</div>
         @endif
 
-        <div class="row g-4">
-            <div class="col-xl-8">
+        @if ($hrDepartment !== null)
+            <section class="hr-assignment-bar" aria-labelledby="hr-workspace-heading">
+                <span class="hr-assignment-icon" aria-hidden="true"><i class="ti ti-shield-check"></i></span>
+                <span>
+                    <small>Assigned department</small>
+                    <strong id="hr-workspace-heading">{{ $hrDepartment->name }}</strong>
+                    <span class="hr-assignment-meta">HR reporting responsibility</span>
+                </span>
+            </section>
+        @endif
+
+        <div class="employee-dashboard-grid">
+            <div>
                 @if ($employee === null)
-                    <section class="card surface-card attendance-status-card h-100" aria-labelledby="profile-unavailable-heading">
-                        <div class="card-body p-4 p-lg-5">
-                            <p class="detail-label mb-1">Attendance unavailable</p>
-                            <h2 class="h4" id="profile-unavailable-heading">Employee profile not found</h2>
-                            <p class="text-body-secondary mb-0">Contact an administrator to complete your workforce profile.</p>
-                        </div>
+                    <section class="attendance-console" aria-labelledby="profile-unavailable-heading">
+                        <p class="eyebrow mb-1">Attendance unavailable</p>
+                        <h2 id="profile-unavailable-heading">Employee profile not found</h2>
+                        <p class="mb-0">Contact an administrator to complete your workforce profile.</p>
                     </section>
                 @else
                     @include('employee.attendance._status-panel')
                 @endif
             </div>
-            <div class="col-xl-4">
-                <div class="d-grid gap-4">
-                    <section class="card surface-card" aria-labelledby="personal-tools-heading">
-                        <div class="card-body p-4">
-                            <p class="detail-label mb-1">Personal tools</p>
-                            <h2 class="h5 mb-3" id="personal-tools-heading">Attendance records</h2>
-                            <div class="d-grid gap-2">
-                                <a class="btn btn-outline-primary text-start" href="{{ route('employee.attendance.history') }}">View attendance history</a>
-                                <a class="btn btn-outline-primary text-start" href="{{ route('employee.dtr.index') }}">Open monthly DTR</a>
-                                <a class="btn btn-outline-primary text-start" href="{{ route('team-attendance.index') }}">View team attendance</a>
-                            </div>
-                        </div>
-                    </section>
 
-                    @if ($hrDepartment !== null)
-                        <section class="card surface-card department-workspace-card" aria-labelledby="hr-workspace-heading">
-                            <div class="card-body p-4">
-                                <span class="eyebrow">HR Representative</span>
-                                <h2 class="h5 mb-1" id="hr-workspace-heading">{{ $hrDepartment->name }}</h2>
-                                <p class="text-body-secondary small mb-3">Your HR access is limited to this assigned department.</p>
-                                <div class="d-grid gap-2">
-                                    <a class="btn btn-workforce" href="{{ route('hr.team-attendance.index') }}">Department Team Attendance</a>
-                                    <a class="btn btn-outline-primary" href="{{ route('hr.reports.attendance.index') }}">Department Reports</a>
-                                </div>
-                            </div>
-                        </section>
-                    @endif
+            <section class="recent-attendance" aria-labelledby="recent-personal-attendance-heading">
+                <div class="section-heading">
+                    <div>
+                        <p class="eyebrow mb-1">Personal record</p>
+                        <h2 id="recent-personal-attendance-heading">Recent attendance</h2>
+                    </div>
+                    <a class="section-link" href="{{ route('employee.attendance.history') }}">View all<i class="ti ti-arrow-right" aria-hidden="true"></i></a>
                 </div>
-            </div>
+                <div class="attendance-preview-list">
+                    @forelse ($recentSessions as $session)
+                        <div class="attendance-preview-item">
+                            <span class="activity-icon {{ $session->time_out_at === null ? 'activity-icon-working' : 'activity-icon-completed' }}" aria-hidden="true"><i class="ti {{ $session->time_out_at === null ? 'ti-clock-play' : 'ti-clock-check' }}"></i></span>
+                            <span class="attendance-preview-copy">
+                                <strong>{{ $session->work_date->format('M j, Y') }}</strong>
+                                <small>{{ $session->work_arrangement?->label() ?? 'Not recorded' }}</small>
+                            </span>
+                            <span class="status-text">{{ $session->time_out_at === null ? 'Working' : 'Completed' }}</span>
+                        </div>
+                    @empty
+                        <p class="empty-state mb-0">No attendance records yet.</p>
+                    @endforelse
+                </div>
+            </section>
         </div>
     </div>
 @endsection

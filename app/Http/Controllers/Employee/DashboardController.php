@@ -24,6 +24,11 @@ class DashboardController extends Controller
             ...($employee === null ? [] : $attendanceOverview->for($employee)),
             'employee' => $employee,
             'hrDepartment' => $hrDepartment,
+            'recentSessions' => $employee?->attendanceSessions()
+                ->orderByDesc('work_date')
+                ->orderByDesc('time_in_at')
+                ->limit(5)
+                ->get() ?? collect(),
         ]);
     }
 }

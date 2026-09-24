@@ -38,6 +38,9 @@ class EmployeeDtrTest extends TestCase
             'month' => '2026-09',
             'employee_id' => $otherEmployee->id,
         ]))->assertOk()
+            ->assertSee('September 2026')
+            ->assertSee('type="month"', false)
+            ->assertSee('value="2026-09"', false)
             ->assertSee('Own Employee')
             ->assertSee('8:25 AM')
             ->assertSee('OFFICE-BASED')

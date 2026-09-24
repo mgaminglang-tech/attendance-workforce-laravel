@@ -58,6 +58,8 @@ class DashboardAuthorizationTest extends TestCase
             ->assertOk()
             ->assertSee('Admin Dashboard')
             ->assertSee($user->name)
+            ->assertDontSee('Add employee')
+            ->assertDontSee(route('admin.employees.create'), false)
             ->assertDontSee(route('employee.dashboard'), false);
     }
 
@@ -84,7 +86,8 @@ class DashboardAuthorizationTest extends TestCase
             ->get(route('employee.dashboard'))
             ->assertOk()
             ->assertSee('Currently working')
-            ->assertSee('Sep 23, 2026 11:30:00 AM')
+            ->assertSee('September 23, 2026')
+            ->assertSee('11:30 AM')
             ->assertSee('Time Out')
             ->assertDontSee('name="work_arrangement"', false);
     }
@@ -114,10 +117,12 @@ class DashboardAuthorizationTest extends TestCase
                 'employees' => 2,
                 'working' => 1,
                 'completed_today' => 1,
-                'active_departments' => 1,
+                'not_clocked_in' => 0,
             ])
             ->assertSee($workingEmployee->user->name)
-            ->assertSee($completedEmployee->user->name);
+            ->assertSee($completedEmployee->user->name)
+            ->assertSee('Department overview')
+            ->assertDontSee('Quick actions');
     }
 
     public function test_hr_representative_dashboard_keeps_personal_and_department_workspaces_distinct(): void
@@ -128,13 +133,17 @@ class DashboardAuthorizationTest extends TestCase
         Employee::factory()->for($user)->for($personalDepartment)->create();
         DepartmentHrAssignment::factory()->for($assignedDepartment)->for($user)->create();
 
-        $this->actingAs($user)
+        $response = $this->actingAs($user)
             ->get(route('employee.dashboard'))
             ->assertOk()
             ->assertSee('HR Representative')
             ->assertSee('Finance')
-            ->assertSee(route('hr.team-attendance.index'), false)
-            ->assertSee(route('hr.reports.attendance.index'), false)
-            ->assertSee(route('employee.attendance.history'), false);
+            ->assertSee('HR reporting responsibility')
+            ->assertDontSee('hr-assignment-actions', false)
+            ->assertSee(route('employee.attendance.history'), false)
+            ->assertDontSee('Personal tools');
+
+        $this->assertSame(2, substr_count($response->getContent(), route('hr.team-attendance.index')));
+        $this->assertSame(2, substr_count($response->getContent(), route('hr.reports.attendance.index')));
     }
 }

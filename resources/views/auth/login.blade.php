@@ -7,7 +7,7 @@
         <div class="container">
             <div class="card auth-card mx-auto">
                 <div class="card-body p-4 p-md-5">
-                    <div class="brand-mark mb-4" aria-hidden="true">WM</div>
+                    <div class="brand-mark mb-4" aria-hidden="true"><i class="ti ti-clock-shield"></i></div>
                     <p class="eyebrow mb-1">Workforce Management</p>
                     <h1 class="h3 fw-bold mb-2">Welcome back</h1>
                     <p class="text-body-secondary mb-4">Sign in to the Employee Timekeeping &amp; Workforce Management System.</p>
@@ -52,7 +52,7 @@
                             <label class="form-check-label" for="remember">Remember me</label>
                         </div>
 
-                        <button class="btn btn-workforce btn-lg w-100" type="submit">Sign in</button>
+                        <button class="btn btn-workforce btn-lg w-100" type="submit"><i class="ti ti-login me-2" aria-hidden="true"></i>Sign in</button>
                     </form>
                 </div>
             </div>

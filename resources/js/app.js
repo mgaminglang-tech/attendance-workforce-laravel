@@ -2,16 +2,28 @@ import * as bootstrap from 'bootstrap';
 
 window.bootstrap = bootstrap;
 
-const manilaClock = document.querySelector('[data-manila-clock]');
+const manilaClock = document.querySelector('[data-manila-clock-time]');
 
 if (manilaClock) {
-    const formatter = new Intl.DateTimeFormat('en-PH', {
-        dateStyle: 'full',
-        timeStyle: 'medium',
+    const date = document.querySelector('[data-manila-clock-date]');
+    const timeFormatter = new Intl.DateTimeFormat('en-PH', {
+        hour: 'numeric',
+        minute: '2-digit',
+        timeZone: 'Asia/Manila',
+    });
+    const dateFormatter = new Intl.DateTimeFormat('en-PH', {
+        weekday: 'short',
+        month: 'short',
+        day: 'numeric',
+        year: 'numeric',
         timeZone: 'Asia/Manila',
     });
     const renderClock = () => {
-        manilaClock.textContent = formatter.format(new Date());
+        const now = new Date();
+
+        manilaClock.textContent = timeFormatter.format(now);
+        manilaClock.dateTime = now.toISOString();
+        date.textContent = dateFormatter.format(now);
     };
 
     renderClock();
@@ -37,72 +49,136 @@ document.querySelectorAll('[data-submit-once]').forEach((form) => {
     });
 });
 
+const monthFormatter = new Intl.DateTimeFormat('en-PH', {
+    month: 'long',
+    year: 'numeric',
+    timeZone: 'UTC',
+});
+
+document.querySelectorAll('[data-month-picker]').forEach((monthPicker) => {
+    const input = monthPicker.querySelector('input[type="month"]');
+    const display = monthPicker.querySelector('[data-month-display]');
+    const accessibleDisplay = monthPicker.querySelector('[data-month-accessible-display]');
+    const updateDisplay = () => {
+        const [year, month] = input.value.split('-').map(Number);
+        const formatted = year && month
+            ? monthFormatter.format(new Date(Date.UTC(year, month - 1, 1)))
+            : 'Choose month';
+
+        display.textContent = formatted;
+        accessibleDisplay.textContent = formatted;
+    };
+
+    input.addEventListener('change', updateDisplay);
+});
+
+const modalToOpen = document.querySelector('[data-open-modal-on-load="true"]');
+
+if (modalToOpen) {
+    bootstrap.Modal.getOrCreateInstance(modalToOpen).show();
+}
+
 const teamAttendance = document.querySelector('[data-team-attendance]');
 
 if (teamAttendance) {
-    const membersBody = teamAttendance.querySelector('[data-team-members]');
+    const activityFeed = teamAttendance.querySelector('[data-team-activity]');
     const refreshError = teamAttendance.querySelector('[data-refresh-error]');
-    const statusBadgeClass = (status) => {
-        if (status === 'Working') {
-            return 'status-badge-working';
+    const initialPayload = JSON.parse(teamAttendance.querySelector('[data-team-initial-payload]').textContent);
+    let activitySignature = JSON.stringify(initialPayload.activity);
+    const renderActivity = (activity) => {
+        const nextSignature = JSON.stringify(activity);
+
+        if (nextSignature === activitySignature) {
+            return;
         }
 
-        if (status === 'Completed') {
-            return 'status-badge-completed';
+        const items = document.createDocumentFragment();
+        let previousDate = null;
+
+        if (activity.length === 0) {
+            const emptyState = document.createElement('li');
+            emptyState.className = 'feed-empty-state';
+            emptyState.textContent = 'No active employees are assigned to this department.';
+            items.append(emptyState);
         }
 
-        return 'status-badge-neutral';
-    };
-    const appendCell = (row, value) => {
-        const cell = document.createElement('td');
-        cell.textContent = value ?? '—';
-        row.append(cell);
+        activity.forEach((event) => {
+            if (event.date_label !== previousDate) {
+                const separator = document.createElement('li');
+                const label = document.createElement('span');
+                separator.className = 'feed-date-separator';
+                separator.setAttribute('aria-label', event.date_label);
+                label.textContent = event.date_label;
+                separator.append(label);
+                items.append(separator);
+                previousDate = event.date_label;
+            }
 
-        return cell;
-    };
-    const renderMembers = (members) => {
-        const rows = document.createDocumentFragment();
+            const item = document.createElement('li');
+            const avatar = document.createElement('span');
+            const content = document.createElement('div');
+            const main = document.createElement('div');
+            const name = document.createElement('span');
+            const action = document.createElement('span');
+            const time = document.createElement('time');
+            const meta = document.createElement('div');
+            const arrangement = document.createElement('span');
 
-        if (members.length === 0) {
-            const row = document.createElement('tr');
-            const cell = appendCell(row, 'No employees found in this department.');
-            cell.colSpan = 6;
-            cell.className = 'empty-state';
-            rows.append(row);
-        }
+            item.className = event.event === 'Not Clocked In'
+                ? 'attendance-event attendance-event-muted'
+                : 'attendance-event';
+            avatar.className = 'avatar attendance-avatar';
+            avatar.setAttribute('aria-hidden', 'true');
+            avatar.textContent = event.employee_initials;
+            content.className = 'attendance-event-content';
+            main.className = 'attendance-event-main';
+            name.className = 'attendance-event-name';
+            name.textContent = event.employee_name;
+            main.append(name);
 
-        members.forEach((member) => {
-            const row = document.createElement('tr');
-            const employeeCell = document.createElement('td');
-            const employeeName = document.createElement('span');
-            const employeeNumber = document.createElement('span');
-            const statusCell = document.createElement('td');
-            const statusBadge = document.createElement('span');
+            if (event.is_hr_representative) {
+                const hrBadge = document.createElement('span');
+                hrBadge.className = 'hr-badge';
+                hrBadge.setAttribute('aria-label', 'HR Representative');
+                hrBadge.title = 'HR Representative';
+                hrBadge.textContent = 'HR';
+                main.append(hrBadge);
+            }
 
-            employeeName.className = 'fw-semibold';
-            employeeName.textContent = member.employee_name;
-            employeeNumber.className = 'small text-body-secondary';
-            employeeNumber.textContent = member.employee_number;
-            employeeCell.append(employeeName, document.createElement('br'), employeeNumber);
-            row.append(employeeCell);
+            action.className = 'attendance-event-action';
+            action.textContent = event.event;
+            content.append(main, action);
 
-            statusBadge.className = `badge status-badge ${statusBadgeClass(member.status)}`;
-            statusBadge.textContent = member.status;
-            statusCell.append(statusBadge);
-            row.append(statusCell);
+            if (event.event_time) {
+                time.dateTime = event.occurred_at;
+                time.textContent = event.event_time;
+                main.append(time);
+            }
 
-            appendCell(row, member.time_in);
-            appendCell(row, member.time_out);
-            const arrangementCell = appendCell(row, '');
-            const arrangementBadge = document.createElement('span');
-            arrangementBadge.className = 'badge arrangement-badge';
-            arrangementBadge.textContent = member.work_arrangement ?? '—';
-            arrangementCell.append(arrangementBadge);
-            appendCell(row, member.work_date);
-            rows.append(row);
+            meta.className = 'attendance-event-meta';
+            arrangement.className = 'arrangement-chip';
+
+            if (event.work_arrangement) {
+                arrangement.textContent = event.work_arrangement;
+                meta.append(arrangement);
+            }
+
+            if (event.net_hours && Number.parseFloat(event.net_hours) > 0) {
+                const netHours = document.createElement('span');
+                netHours.className = 'net-hours';
+                netHours.textContent = `${event.net_hours} worked`;
+                meta.append(netHours);
+            }
+
+            if (meta.childElementCount > 0) {
+                content.append(meta);
+            }
+            item.append(avatar, content);
+            items.append(item);
         });
 
-        membersBody.replaceChildren(rows);
+        activityFeed.replaceChildren(items);
+        activitySignature = nextSignature;
     };
     const refreshTeamAttendance = async () => {
         if (document.hidden) {
@@ -127,7 +203,7 @@ if (teamAttendance) {
                 }
             });
             teamAttendance.querySelector('[data-last-updated]').textContent = data.last_updated;
-            renderMembers(data.members);
+            renderActivity(data.activity);
             refreshError.classList.add('d-none');
         } catch {
             refreshError.classList.remove('d-none');

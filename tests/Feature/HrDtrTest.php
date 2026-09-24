@@ -30,6 +30,9 @@ class HrDtrTest extends TestCase
             'employee' => $employee,
             'month' => '2026-09',
         ]))->assertOk()
+            ->assertSee('September 2026')
+            ->assertSee('type="month"', false)
+            ->assertSee('value="2026-09"', false)
             ->assertSee('Historical Employee')
             ->assertViewHas('dtr', fn (array $dtr): bool => $dtr['employee']->is($employee));
 

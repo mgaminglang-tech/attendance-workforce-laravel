@@ -39,6 +39,9 @@ class AdminDtrTest extends TestCase
             'employee_id' => $employee->id,
             'month' => '2026-09',
         ]))->assertOk()
+            ->assertSee('September 2026')
+            ->assertSee('type="month"', false)
+            ->assertSee('value="2026-09"', false)
             ->assertSee('Remote Operations')
             ->assertSee('7:45 AM')
             ->assertSee('FIELD-BASED')

@@ -44,6 +44,28 @@ class AttendanceReportTest extends TestCase
             ->assertSee('Finance Employee');
     }
 
+    public function test_bulk_department_dtr_download_is_presented_once_in_an_accessible_modal(): void
+    {
+        $this->travelTo(CarbonImmutable::parse('2026-09-24 10:00:00', 'Asia/Manila'));
+        $admin = User::factory()->admin()->create();
+        $department = Department::factory()->create(['name' => 'Finance']);
+
+        $response = $this->actingAs($admin)->get(route('admin.reports.attendance.index'));
+
+        $response->assertOk()
+            ->assertSee('data-bs-target="#bulk-dtr-modal"', false)
+            ->assertSee('aria-labelledby="bulk-dtr-heading"', false)
+            ->assertSee('data-bs-dismiss="modal"', false)
+            ->assertSee('action="'.route('admin.reports.dtr.bulk').'"', false)
+            ->assertSee('name="department"', false)
+            ->assertSee('type="month"', false)
+            ->assertSee('value="2026-09"', false)
+            ->assertSee('September 2026')
+            ->assertSee($department->name);
+
+        $this->assertSame(1, substr_count($response->getContent(), route('admin.reports.dtr.bulk')));
+    }
+
     public function test_report_filters_and_summaries_use_net_hours_and_open_state(): void
     {
         $admin = User::factory()->admin()->create();
@@ -187,6 +209,9 @@ class AttendanceReportTest extends TestCase
             'date_to' => '2026-09-30',
         ]))->assertOk()
             ->assertSee('Department:')
+            ->assertSee('type="month"', false)
+            ->assertSee('data-bs-target="#bulk-dtr-modal"', false)
+            ->assertSee('Fixed to your assigned department.')
             ->assertSee('Finance Employee')
             ->assertDontSee('IT Employee')
             ->assertViewHas('employees', fn ($employees): bool => $employees->modelKeys() === [$financeEmployee->id]);
