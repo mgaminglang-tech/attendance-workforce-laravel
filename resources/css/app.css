@@ -1360,6 +1360,36 @@ legend {
     font-weight: 750;
 }
 
+.auth-secondary-link {
+    color: var(--workforce-blue-600);
+    font-weight: 650;
+    text-decoration: none;
+}
+
+.auth-secondary-link:hover,
+.auth-secondary-link:focus-visible {
+    color: var(--workforce-navy-800);
+    text-decoration: underline;
+}
+
+.auth-back-link {
+    display: inline-flex;
+    min-height: 2.75rem;
+    align-items: center;
+    gap: 0.35rem;
+    margin-top: 1rem;
+    color: var(--workforce-muted);
+    font-size: 0.85rem;
+    font-weight: 650;
+    text-decoration: none;
+}
+
+.auth-back-link:hover,
+.auth-back-link:focus-visible {
+    color: var(--workforce-navy-800);
+    text-decoration: underline;
+}
+
 /* DTR and reports */
 .dtr-selection-header,
 .dtr-selection-panel {

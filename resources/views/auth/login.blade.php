@@ -12,6 +12,10 @@
                     <h1 class="h3 fw-bold mb-2">Welcome back</h1>
                     <p class="text-body-secondary mb-4">Sign in to the Employee Timekeeping &amp; Workforce Management System.</p>
 
+                    @if (session('status'))
+                        <div class="alert alert-success" role="status" aria-live="polite">{{ session('status') }}</div>
+                    @endif
+
                     <form method="POST" action="{{ route('login.store') }}" novalidate>
                         @csrf
 
@@ -33,7 +37,10 @@
                         </div>
 
                         <div class="mb-3">
-                            <label class="form-label" for="password">Password</label>
+                            <div class="d-flex align-items-center justify-content-between gap-3">
+                                <label class="form-label" for="password">Password</label>
+                                <a class="small auth-secondary-link" href="{{ route('password.request') }}">Forgot password?</a>
+                            </div>
                             <input
                                 class="form-control @error('password') is-invalid @enderror"
                                 id="password"
