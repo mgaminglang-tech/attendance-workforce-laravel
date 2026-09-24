@@ -33,7 +33,11 @@ class AdminDtrTest extends TestCase
         $this->actingAs($admin)->get(route('admin.dtr.index'))
             ->assertOk()
             ->assertSee($employee->employee_number)
-            ->assertSee('Department Employee');
+            ->assertSee('Department Employee')
+            ->assertSee('role="combobox"', false)
+            ->assertSee('name="employee_id"', false)
+            ->assertSee('data-employee-number="'.$employee->employee_number.'"', false)
+            ->assertViewHas('employees', fn ($employees): bool => $employees->contains($employee));
 
         $this->actingAs($admin)->get(route('admin.dtr.preview', [
             'employee_id' => $employee->id,

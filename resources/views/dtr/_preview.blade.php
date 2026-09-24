@@ -12,14 +12,22 @@
                     · {{ $dtr['month_label'] }}
                 </p>
             </div>
-            <a class="btn btn-workforce align-self-md-start" href="{{ $pdfUrl }}">Download PDF</a>
+            <a class="btn btn-workforce dtr-download-button align-self-md-start" href="{{ $pdfUrl }}">
+                <i class="ti ti-download me-1" aria-hidden="true"></i>Download PDF
+            </a>
         </div>
 
         <p class="small text-body-secondary">
             Certification period: {{ $dtr['first_date_label'] }} to {{ $dtr['last_date_label'] }}
         </p>
 
-        <div class="table-responsive dtr-preview-table">
+        <p class="dtr-scroll-hint d-md-none" id="dtr-scroll-hint">
+            <i class="ti ti-arrows-horizontal" aria-hidden="true"></i>
+            Swipe horizontally to view all columns
+        </p>
+
+        <div class="table-responsive dtr-preview-table" tabindex="0" role="region"
+             aria-label="Monthly DTR table" aria-describedby="dtr-scroll-hint">
             <table class="table table-bordered table-sm align-middle mb-0">
                 <thead class="table-light">
                     <tr>

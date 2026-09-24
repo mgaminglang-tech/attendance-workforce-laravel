@@ -12,12 +12,12 @@
 
         <div class="card filter-panel dtr-selection-panel">
             <div class="card-body p-3 p-md-4">
-                <form class="row g-3 align-items-end" method="GET" action="{{ route('employee.dtr.preview') }}">
-                    <div class="col-12 col-sm-7">
+                <form class="row g-3 align-items-end dtr-control-row" method="GET" action="{{ route('employee.dtr.preview') }}">
+                    <div class="col-12 col-md-7">
                         @include('dtr._month-picker', ['id' => 'month', 'value' => old('month', $selectedMonth)])
                     </div>
-                    <div class="col-12 col-md-auto">
-                        <button class="btn btn-workforce btn-lg w-100" type="submit">Preview DTR</button>
+                    <div class="col-12 col-md-auto dtr-submit-column">
+                        <button class="btn btn-workforce btn-lg w-100 text-nowrap" type="submit">Preview DTR</button>
                     </div>
                 </form>
             </div>

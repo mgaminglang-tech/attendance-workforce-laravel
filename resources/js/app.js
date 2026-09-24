@@ -72,6 +72,186 @@ document.querySelectorAll('[data-month-picker]').forEach((monthPicker) => {
     input.addEventListener('change', updateDisplay);
 });
 
+document.querySelectorAll('[data-employee-picker]').forEach((employeePicker) => {
+    const select = employeePicker.querySelector('.employee-picker-native');
+    const combobox = employeePicker.querySelector('[data-employee-picker-combobox]');
+    const input = employeePicker.querySelector('.employee-picker-input');
+    const clearButton = employeePicker.querySelector('[data-employee-picker-clear]');
+    const listbox = employeePicker.querySelector('[data-employee-picker-listbox]');
+    const form = employeePicker.closest('form');
+    const requiresSelection = select.required;
+    const options = Array.from(select.options)
+        .filter((option) => option.value)
+        .map((option, index) => {
+            const item = document.createElement('div');
+            const name = document.createElement('span');
+            const meta = document.createElement('span');
+            const department = option.dataset.employeeDepartment;
+            const optionId = `${listbox.id}-option-${index}`;
+
+            item.className = 'employee-picker-option';
+            item.id = optionId;
+            item.dataset.value = option.value;
+            item.dataset.search = `${option.dataset.employeeName} ${option.dataset.employeeNumber}`.toLocaleLowerCase();
+            item.setAttribute('role', 'option');
+            item.setAttribute('aria-selected', option.selected ? 'true' : 'false');
+            name.className = 'employee-picker-option-name';
+            name.textContent = option.dataset.employeeName;
+            meta.className = 'employee-picker-option-meta';
+            meta.textContent = `#${option.dataset.employeeNumber}${department ? ` · ${department}` : ''}`;
+            item.append(name, meta);
+            listbox.append(item);
+
+            return { item, option };
+        });
+    const emptyState = document.createElement('div');
+    let visibleOptions = options;
+    let activeIndex = -1;
+
+    emptyState.className = 'employee-picker-empty';
+    emptyState.setAttribute('role', 'option');
+    emptyState.setAttribute('aria-disabled', 'true');
+    emptyState.textContent = 'No employees found';
+    emptyState.hidden = true;
+    listbox.append(emptyState);
+
+    const displayLabel = (option) => option
+        ? `${option.dataset.employeeName} · #${option.dataset.employeeNumber}`
+        : '';
+    const selectedOption = () => select.selectedOptions[0]?.value
+        ? select.selectedOptions[0]
+        : null;
+    const closeListbox = () => {
+        listbox.hidden = true;
+        input.setAttribute('aria-expanded', 'false');
+        input.removeAttribute('aria-activedescendant');
+        options.forEach(({ item }) => item.classList.remove('is-active'));
+        activeIndex = -1;
+    };
+    const setActiveOption = (index) => {
+        if (visibleOptions.length === 0) {
+            return;
+        }
+
+        activeIndex = (index + visibleOptions.length) % visibleOptions.length;
+        options.forEach(({ item }) => item.classList.remove('is-active'));
+        const activeOption = visibleOptions[activeIndex].item;
+        activeOption.classList.add('is-active');
+        activeOption.scrollIntoView({ block: 'nearest' });
+        input.setAttribute('aria-activedescendant', activeOption.id);
+    };
+    const filterOptions = () => {
+        const currentLabel = displayLabel(selectedOption()).toLocaleLowerCase();
+        const inputValue = input.value.trim().toLocaleLowerCase();
+        const query = inputValue === currentLabel ? '' : inputValue;
+
+        visibleOptions = options.filter(({ item }) => {
+            const isMatch = item.dataset.search.includes(query);
+            item.hidden = ! isMatch;
+
+            return isMatch;
+        });
+        emptyState.hidden = visibleOptions.length !== 0;
+        activeIndex = -1;
+        input.removeAttribute('aria-activedescendant');
+    };
+    const openListbox = () => {
+        filterOptions();
+        listbox.hidden = false;
+        input.setAttribute('aria-expanded', 'true');
+    };
+    const chooseOption = ({ item, option }) => {
+        select.value = option.value;
+        input.value = displayLabel(option);
+        input.setCustomValidity('');
+        clearButton.hidden = false;
+        options.forEach(({ item: optionItem, option: sourceOption }) => {
+            optionItem.setAttribute('aria-selected', sourceOption === option ? 'true' : 'false');
+        });
+
+        if (employeePicker.dataset.employeePickerAction === 'true' && option.dataset.employeeUrl) {
+            form.action = option.dataset.employeeUrl;
+        }
+
+        select.dispatchEvent(new Event('change', { bubbles: true }));
+        closeListbox();
+        input.focus();
+    };
+    const clearSelection = () => {
+        select.value = '';
+        input.value = '';
+        input.setCustomValidity('');
+        clearButton.hidden = true;
+        options.forEach(({ item }) => item.setAttribute('aria-selected', 'false'));
+        openListbox();
+        input.focus();
+    };
+    const initialSelection = selectedOption();
+
+    select.required = false;
+    select.hidden = true;
+    combobox.hidden = false;
+    input.required = requiresSelection;
+    input.value = displayLabel(initialSelection);
+    clearButton.hidden = initialSelection === null;
+
+    input.addEventListener('focus', openListbox);
+    input.addEventListener('click', openListbox);
+    input.addEventListener('input', () => {
+        if (input.value !== displayLabel(selectedOption())) {
+            select.value = '';
+            options.forEach(({ item }) => item.setAttribute('aria-selected', 'false'));
+        }
+
+        input.setCustomValidity('');
+        clearButton.hidden = input.value.length === 0;
+        openListbox();
+    });
+    input.addEventListener('keydown', (event) => {
+        if (event.key === 'ArrowDown') {
+            event.preventDefault();
+            openListbox();
+            setActiveOption(activeIndex + 1);
+        } else if (event.key === 'ArrowUp') {
+            event.preventDefault();
+            openListbox();
+            setActiveOption(activeIndex - 1);
+        } else if (event.key === 'Enter' && ! listbox.hidden) {
+            const choice = visibleOptions[activeIndex] ?? (visibleOptions.length === 1 ? visibleOptions[0] : null);
+
+            if (choice) {
+                event.preventDefault();
+                chooseOption(choice);
+            }
+        } else if (event.key === 'Escape') {
+            event.preventDefault();
+            input.value = displayLabel(selectedOption());
+            clearButton.hidden = selectedOption() === null;
+            closeListbox();
+        } else if (event.key === 'Tab') {
+            closeListbox();
+        }
+    });
+    clearButton.addEventListener('click', clearSelection);
+    options.forEach((option) => {
+        option.item.addEventListener('pointerdown', (event) => event.preventDefault());
+        option.item.addEventListener('click', () => chooseOption(option));
+    });
+    document.addEventListener('pointerdown', (event) => {
+        if (! employeePicker.contains(event.target)) {
+            closeListbox();
+        }
+    });
+    form.addEventListener('submit', (event) => {
+        if (requiresSelection && ! select.value) {
+            event.preventDefault();
+            input.setCustomValidity('Select an employee from the list.');
+            input.reportValidity();
+            openListbox();
+        }
+    });
+});
+
 const modalToOpen = document.querySelector('[data-open-modal-on-load="true"]');
 
 if (modalToOpen) {

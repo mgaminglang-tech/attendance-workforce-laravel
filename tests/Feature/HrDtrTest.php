@@ -24,6 +24,14 @@ class HrDtrTest extends TestCase
             ->for($finance)
             ->inactive()
             ->create(['employee_number' => 'FIN-HIST']);
+        $financeColleague = Employee::factory()
+            ->for(User::factory()->employee()->state(['name' => 'Finance Colleague']))
+            ->for($finance)
+            ->create(['employee_number' => 'FIN-TEAM']);
+        $otherDepartmentEmployee = Employee::factory()
+            ->for(User::factory()->employee()->state(['name' => 'Other Department Employee']))
+            ->for(Department::factory()->create())
+            ->create(['employee_number' => 'OTHER-TEAM']);
         AttendanceSession::factory()->for($employee)->create(['work_date' => '2026-09-12']);
 
         $this->actingAs($representative)->get(route('hr.dtr.preview', [
@@ -34,6 +42,16 @@ class HrDtrTest extends TestCase
             ->assertSee('type="month"', false)
             ->assertSee('value="2026-09"', false)
             ->assertSee('Historical Employee')
+            ->assertSee('Finance Colleague')
+            ->assertSee('data-employee-number="FIN-TEAM"', false)
+            ->assertSee('data-employee-picker-action="true"', false)
+            ->assertDontSee('Other Department Employee')
+            ->assertDontSee('data-employee-number="OTHER-TEAM"', false)
+            ->assertViewHas('employees', function ($employees) use ($employee, $financeColleague, $otherDepartmentEmployee): bool {
+                return $employees->contains($employee)
+                    && $employees->contains($financeColleague)
+                    && ! $employees->contains($otherDepartmentEmployee);
+            })
             ->assertViewHas('dtr', fn (array $dtr): bool => $dtr['employee']->is($employee));
 
         $response = $this->actingAs($representative)->get(route('hr.dtr.pdf', [

@@ -10,11 +10,42 @@
                 <h1 class="h2 mb-1">Attendance history</h1>
                 <p class="text-body-secondary mb-0">Your attendance sessions, newest work date first.</p>
             </div>
-            <a class="btn btn-outline-secondary" href="{{ route('employee.attendance.index') }}">Back to timekeeping</a>
+            <a class="btn btn-sm btn-outline-secondary align-self-start" href="{{ route('employee.attendance.index') }}">
+                <i class="ti ti-arrow-left me-1" aria-hidden="true"></i>Back to timekeeping
+            </a>
         </header>
 
         <div class="card surface-card">
-            <div class="table-responsive">
+            <div class="attendance-history-mobile d-md-none">
+                @forelse ($attendanceSessions as $attendanceSession)
+                    @php($workedMinutes = $attendanceSession->workedMinutes())
+                    <article class="attendance-history-record" data-attendance-mobile-record>
+                        <div class="d-flex justify-content-between align-items-start gap-3">
+                            <div>
+                                <p class="attendance-history-date mb-1">{{ $attendanceSession->work_date->format('M j, Y') }}</p>
+                                <p class="attendance-history-times mb-0">
+                                    {{ $attendanceSession->time_in_at->format('g:i A') }}
+                                    <i class="ti ti-arrow-right" aria-hidden="true"></i>
+                                    {{ $attendanceSession->time_out_at?->format('g:i A') ?? 'Still working' }}
+                                </p>
+                            </div>
+                            <span class="badge status-badge {{ $workedMinutes === null ? 'status-badge-working' : 'status-badge-completed' }}">
+                                {{ $workedMinutes === null ? 'Working' : 'Completed' }}
+                            </span>
+                        </div>
+                        <div class="attendance-history-meta">
+                            <span class="badge arrangement-badge">{{ $attendanceSession->work_arrangement?->label() ?? 'Not recorded' }}</span>
+                            @if ($workedMinutes !== null)
+                                <span class="attendance-history-duration">Duration: {{ intdiv($workedMinutes, 60) }}h {{ $workedMinutes % 60 }}m</span>
+                            @endif
+                        </div>
+                    </article>
+                @empty
+                    <p class="empty-state mb-0">No attendance records found.</p>
+                @endforelse
+            </div>
+
+            <div class="table-responsive d-none d-md-block" data-attendance-history-table>
                 <table class="table table-hover align-middle mb-0">
                     <thead class="table-light">
                         <tr>

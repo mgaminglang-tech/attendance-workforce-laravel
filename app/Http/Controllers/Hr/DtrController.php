@@ -7,6 +7,7 @@ use App\Http\Requests\HrDtrRequest;
 use App\Models\Employee;
 use App\Services\BuildMonthlyDtr;
 use App\Services\MonthlyDtrPdf;
+use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Http\Response;
 use Illuminate\View\View;
 
@@ -17,8 +18,11 @@ class DtrController extends Controller
         Employee $employee,
         BuildMonthlyDtr $builder,
     ): View {
+        $employee->loadMissing(['user:id,name', 'department:id,name']);
+
         return view('hr.dtr.show', [
-            'employee' => $employee->loadMissing(['user:id,name', 'department:id,name']),
+            'employee' => $employee,
+            'employees' => $this->departmentEmployees($employee),
             'selectedMonth' => $request->string('month')->toString(),
             'dtr' => $builder->handle($employee, $request->selectedMonth()),
         ]);
@@ -31,5 +35,15 @@ class DtrController extends Controller
         MonthlyDtrPdf $pdf,
     ): Response {
         return $pdf->download($builder->handle($employee, $request->selectedMonth()));
+    }
+
+    /** @return Collection<int, Employee> */
+    private function departmentEmployees(Employee $employee): Collection
+    {
+        return Employee::query()
+            ->where('department_id', $employee->department_id)
+            ->with(['user:id,name', 'department:id,name'])
+            ->orderBy('employee_number')
+            ->get();
     }
 }

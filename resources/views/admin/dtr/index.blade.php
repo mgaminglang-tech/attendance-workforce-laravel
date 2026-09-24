@@ -12,26 +12,20 @@
 
         <div class="card filter-panel dtr-selection-panel">
             <div class="card-body p-3 p-md-4">
-                <form class="row g-3 align-items-end" method="GET" action="{{ route('admin.dtr.preview') }}">
-                    <div class="col-12 col-lg-6">
-                        <label class="form-label" for="employee_id">Employee</label>
-                        <select class="form-select form-select-lg @error('employee_id') is-invalid @enderror"
-                                id="employee_id" name="employee_id" required>
-                            <option value="">Select an employee</option>
-                            @foreach ($employees as $employee)
-                                <option value="{{ $employee->id }}" @selected((string) old('employee_id', $selectedEmployee?->id) === (string) $employee->id)>
-                                    {{ $employee->employee_number }} — {{ $employee->user->name }}
-                                    @if ($employee->department) · {{ $employee->department->name }} @endif
-                                </option>
-                            @endforeach
-                        </select>
-                        @error('employee_id')<div class="invalid-feedback">{{ $message }}</div>@enderror
+                <form class="row g-3 align-items-end dtr-control-row" method="GET" action="{{ route('admin.dtr.preview') }}">
+                    <div class="col-12 col-lg-7">
+                        @include('dtr._employee-picker', [
+                            'id' => 'employee_id',
+                            'name' => 'employee_id',
+                            'employees' => $employees,
+                            'selectedEmployee' => $selectedEmployee,
+                        ])
                     </div>
                     <div class="col-12 col-md-6 col-lg-3">
                         @include('dtr._month-picker', ['id' => 'month', 'value' => old('month', $selectedMonth)])
                     </div>
-                    <div class="col-12 col-md-auto">
-                        <button class="btn btn-workforce btn-lg w-100" type="submit">Preview DTR</button>
+                    <div class="col-12 col-md-auto dtr-submit-column">
+                        <button class="btn btn-workforce btn-lg w-100 text-nowrap" type="submit">Preview DTR</button>
                     </div>
                 </form>
             </div>

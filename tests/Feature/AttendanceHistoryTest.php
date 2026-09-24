@@ -84,6 +84,10 @@ class AttendanceHistoryTest extends TestCase
         $this->actingAs($user)
             ->get(route('employee.attendance.history'))
             ->assertOk()
+            ->assertSee('data-attendance-mobile-record', false)
+            ->assertSee('data-attendance-history-table', false)
+            ->assertSee('Completed')
+            ->assertSee('Duration: 8h 15m')
             ->assertSee('8h 15m')
             ->assertSee('Still working')
             ->assertSee('Working');
