@@ -1,4 +1,4 @@
-<section class="card border-0 shadow-sm mt-4" aria-labelledby="dtr-preview-heading">
+<section class="card surface-card mt-4" aria-labelledby="dtr-preview-heading">
     <div class="card-body p-3 p-md-4">
         <div class="d-flex flex-column flex-md-row justify-content-between gap-3 mb-4">
             <div>
@@ -41,9 +41,9 @@
                             <td>{{ $row['total_hours'] }}</td>
                             <td>
                                 @if ($row['has_legacy_arrangement'])
-                                    <span class="text-body-secondary">Not recorded</span>
+                                    <span class="badge arrangement-badge">Not recorded</span>
                                 @else
-                                    {{ $row['work_arrangement'] }}
+                                    <span class="badge arrangement-badge">{{ $row['work_arrangement'] }}</span>
                                 @endif
                             </td>
                             <td>{{ $row['attendance_rendered'] }}</td>

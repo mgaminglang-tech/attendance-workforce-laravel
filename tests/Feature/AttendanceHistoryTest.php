@@ -86,7 +86,7 @@ class AttendanceHistoryTest extends TestCase
             ->assertOk()
             ->assertSee('8h 15m')
             ->assertSee('Still working')
-            ->assertSee('Open');
+            ->assertSee('Working');
 
         $this->assertFalse(AttendanceSession::query()->firstOrFail()->isFillable('total_hours'));
     }

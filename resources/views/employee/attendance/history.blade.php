@@ -3,17 +3,17 @@
 @section('title', 'Attendance History | '.config('app.name'))
 
 @section('content')
-    <div class="container py-4 py-md-5">
-        <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3 mb-4">
+    <div class="container-xxl page-shell">
+        <header class="page-header d-flex flex-column flex-md-row justify-content-between align-items-md-end gap-3">
             <div>
-                <span class="badge text-bg-secondary mb-2">Employee attendance</span>
+                <span class="eyebrow">Employee attendance</span>
                 <h1 class="h2 mb-1">Attendance history</h1>
                 <p class="text-body-secondary mb-0">Your attendance sessions, newest work date first.</p>
             </div>
             <a class="btn btn-outline-secondary" href="{{ route('employee.attendance.index') }}">Back to timekeeping</a>
-        </div>
+        </header>
 
-        <div class="card border-0 shadow-sm">
+        <div class="card surface-card">
             <div class="table-responsive">
                 <table class="table table-hover align-middle mb-0">
                     <thead class="table-light">
@@ -32,10 +32,10 @@
                                 <td class="fw-semibold">{{ $attendanceSession->work_date->format('M j, Y') }}</td>
                                 <td>{{ $attendanceSession->time_in_at->format('M j, Y g:i:s A') }}</td>
                                 <td>{{ $attendanceSession->time_out_at?->format('M j, Y g:i:s A') ?? 'Still working' }}</td>
-                                <td>{{ $attendanceSession->work_arrangement?->label() ?? 'Not recorded' }}</td>
+                                <td><span class="badge arrangement-badge">{{ $attendanceSession->work_arrangement?->label() ?? 'Not recorded' }}</span></td>
                                 <td>
                                     @if ($workedMinutes === null)
-                                        <span class="badge text-bg-success">Open</span>
+                                        <span class="badge status-badge status-badge-working">Working</span>
                                     @else
                                         {{ intdiv($workedMinutes, 60) }}h {{ $workedMinutes % 60 }}m
                                     @endif
@@ -43,7 +43,7 @@
                             </tr>
                         @empty
                             <tr>
-                                <td class="text-center text-body-secondary py-5" colspan="5">No attendance records yet.</td>
+                                <td class="empty-state" colspan="5">No attendance records found.</td>
                             </tr>
                         @endforelse
                     </tbody>

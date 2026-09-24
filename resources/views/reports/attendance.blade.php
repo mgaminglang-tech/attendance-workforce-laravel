@@ -3,10 +3,10 @@
 @section('title', 'Attendance Reports | '.config('app.name'))
 
 @section('content')
-    <div class="container py-4 py-md-5">
-        <div class="d-flex flex-column flex-lg-row justify-content-between gap-3 mb-4">
+    <div class="container-xxl page-shell">
+        <header class="page-header d-flex flex-column flex-lg-row justify-content-between gap-3">
             <div>
-                <span class="badge text-bg-{{ $isAdmin ? 'primary' : 'secondary' }} mb-2">{{ $scopeLabel }}</span>
+                <span class="eyebrow">{{ $scopeLabel }}</span>
                 <h1 class="h2 mb-1">Attendance Reports</h1>
                 <p class="text-body-secondary mb-0">
                     @if ($department)
@@ -16,7 +16,7 @@
                     @endif
                 </p>
             </div>
-        </div>
+        </header>
 
         @if ($errors->any())
             <div class="alert alert-danger" role="alert">
@@ -29,7 +29,7 @@
             </div>
         @endif
 
-        <div class="card border-0 shadow-sm mb-4">
+        <div class="card filter-panel mb-4">
             <div class="card-body p-3 p-md-4">
                 <form method="GET" action="{{ $reportRoute }}">
                     <div class="row g-3 align-items-end">
@@ -98,14 +98,19 @@
         </div>
 
         <div class="row g-3 mb-4">
-            <div class="col-6 col-xl"><div class="card border-0 shadow-sm h-100"><div class="card-body"><p class="detail-label mb-1">Records</p><p class="h3 mb-0">{{ $summary['records'] }}</p></div></div></div>
-            <div class="col-6 col-xl"><div class="card border-0 shadow-sm h-100"><div class="card-body"><p class="detail-label mb-1">Employees</p><p class="h3 mb-0">{{ $summary['unique_employees'] }}</p></div></div></div>
-            <div class="col-6 col-xl"><div class="card border-0 shadow-sm h-100"><div class="card-body"><p class="detail-label mb-1">Completed</p><p class="h3 text-primary mb-0">{{ $summary['completed'] }}</p></div></div></div>
-            <div class="col-6 col-xl"><div class="card border-0 shadow-sm h-100"><div class="card-body"><p class="detail-label mb-1">Open</p><p class="h3 text-success mb-0">{{ $summary['open'] }}</p></div></div></div>
-            <div class="col-12 col-xl"><div class="card border-0 shadow-sm h-100"><div class="card-body"><p class="detail-label mb-1">Total Net Hours</p><p class="h3 mb-0">{{ $summary['total_net_hours'] }}</p></div></div></div>
+            <div class="col-6 col-xl"><div class="card metric-card h-100"><div class="card-body"><p class="detail-label mb-1">Records</p><p class="metric-value">{{ $summary['records'] }}</p></div></div></div>
+            <div class="col-6 col-xl"><div class="card metric-card h-100"><div class="card-body"><p class="detail-label mb-1">Employees</p><p class="metric-value">{{ $summary['unique_employees'] }}</p></div></div></div>
+            <div class="col-6 col-xl"><div class="card metric-card h-100"><div class="card-body"><p class="detail-label mb-1">Completed</p><p class="metric-value">{{ $summary['completed'] }}</p></div></div></div>
+            <div class="col-6 col-xl"><div class="card metric-card h-100"><div class="card-body"><p class="detail-label mb-1">Open</p><p class="metric-value text-success">{{ $summary['open'] }}</p></div></div></div>
+            <div class="col-12 col-xl"><div class="card metric-card h-100"><div class="card-body"><p class="detail-label mb-1">Total Net Hours</p><p class="metric-value">{{ $summary['total_net_hours'] }}</p></div></div></div>
         </div>
 
-        <div class="card border-0 shadow-sm mb-4">
+        <div class="d-flex flex-column flex-md-row justify-content-between gap-1 mb-3">
+            <h2 class="h5 mb-0">Report results</h2>
+            <p class="small text-body-secondary mb-0">{{ $filters->dateFrom->format('M j, Y') }} to {{ $filters->dateTo->format('M j, Y') }}</p>
+        </div>
+
+        <div class="card surface-card mb-4">
             <div class="table-responsive report-table">
                 <table class="table table-hover align-middle mb-0">
                     <thead class="table-light">
@@ -132,10 +137,10 @@
                                 <td>{{ $session['department_name'] }}</td>
                                 <td class="text-nowrap">{{ $session['time_in'] }}</td>
                                 <td class="text-nowrap">{{ $session['time_out'] !== '' ? $session['time_out'] : '—' }}</td>
-                                <td>{{ $session['work_arrangement'] }}</td>
+                                <td><span class="badge arrangement-badge">{{ $session['work_arrangement'] }}</span></td>
                                 <td>{{ $session['net_hours'] !== '' ? $session['net_hours'] : '—' }}</td>
                                 <td>
-                                    <span class="badge status-badge text-bg-{{ $session['status'] === 'Completed' ? 'secondary' : 'success' }}">
+                                    <span class="badge status-badge {{ $session['status'] === 'Completed' ? 'status-badge-completed' : 'status-badge-working' }}">
                                         {{ $session['status'] }}
                                     </span>
                                 </td>
@@ -148,7 +153,7 @@
                                 </td>
                             </tr>
                         @empty
-                            <tr><td class="text-center text-body-secondary py-5" colspan="9">No attendance records match these filters.</td></tr>
+                            <tr><td class="empty-state" colspan="9">No report results match the selected filters.</td></tr>
                         @endforelse
                     </tbody>
                 </table>
@@ -158,7 +163,7 @@
             @endif
         </div>
 
-        <section class="card border-0 shadow-sm" aria-labelledby="bulk-dtr-heading">
+        <section class="card surface-card department-workspace-card" aria-labelledby="bulk-dtr-heading">
             <div class="card-body p-3 p-md-4">
                 <h2 class="h4 mb-1" id="bulk-dtr-heading">Bulk Department DTR Download</h2>
                 <p class="text-body-secondary">Download one monthly PDF per department employee in a private ZIP archive.</p>

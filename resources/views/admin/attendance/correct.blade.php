@@ -3,14 +3,14 @@
 @section('title', 'Correct Attendance | '.config('app.name'))
 
 @section('content')
-    <div class="container py-4 py-md-5">
+    <div class="container-xxl page-shell">
         <div class="row justify-content-center">
             <div class="col-xl-8">
-                <div class="mb-4">
-                    <span class="badge text-bg-warning mb-2">Administrative correction</span>
+                <header class="page-header">
+                    <span class="eyebrow text-warning-emphasis">Administrative correction</span>
                     <h1 class="h2 mb-1">Correct attendance session</h1>
                     <p class="text-body-secondary mb-0">Every saved correction is permanently attributed and recorded with before-and-after values.</p>
-                </div>
+                </header>
 
                 @if ($errors->any())
                     <div class="alert alert-danger" role="alert">
@@ -22,8 +22,9 @@
                     </div>
                 @endif
 
-                <div class="card border-0 shadow-sm mb-4">
+                <section class="card surface-card mb-4" aria-labelledby="current-attendance-heading">
                     <div class="card-body p-4">
+                        <h2 class="h5 mb-3" id="current-attendance-heading">Current Attendance</h2>
                         <div class="d-flex justify-content-between gap-3">
                             <div>
                                 <p class="detail-label mb-1">Employee</p>
@@ -37,10 +38,12 @@
                             </div>
                         </div>
                     </div>
-                </div>
+                </section>
 
-                <div class="card border-warning shadow-sm">
+                <section class="card border-warning surface-card" aria-labelledby="correction-form-heading">
                     <div class="card-body p-4">
+                        <h2 class="h5 mb-1" id="correction-form-heading">Correction Form</h2>
+                        <p class="small text-body-secondary mb-4">Verify every value before saving. The resulting audit entry cannot be edited or deleted.</p>
                         <form method="POST" action="{{ route('admin.attendance.correction.update', $attendanceSession) }}"
                               data-submit-once data-confirm-message="Save this administrative correction? The audit entry cannot be edited or deleted.">
                             @csrf
@@ -94,7 +97,7 @@
                             </div>
                         </form>
                     </div>
-                </div>
+                </section>
             </div>
         </div>
     </div>

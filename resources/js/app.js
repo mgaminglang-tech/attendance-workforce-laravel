@@ -44,14 +44,14 @@ if (teamAttendance) {
     const refreshError = teamAttendance.querySelector('[data-refresh-error]');
     const statusBadgeClass = (status) => {
         if (status === 'Working') {
-            return 'text-bg-success';
+            return 'status-badge-working';
         }
 
         if (status === 'Completed') {
-            return 'text-bg-primary';
+            return 'status-badge-completed';
         }
 
-        return 'text-bg-secondary';
+        return 'status-badge-neutral';
     };
     const appendCell = (row, value) => {
         const cell = document.createElement('td');
@@ -65,9 +65,9 @@ if (teamAttendance) {
 
         if (members.length === 0) {
             const row = document.createElement('tr');
-            const cell = appendCell(row, 'No active employees are assigned to this department.');
+            const cell = appendCell(row, 'No employees found in this department.');
             cell.colSpan = 6;
-            cell.className = 'text-center text-body-secondary py-5';
+            cell.className = 'empty-state';
             rows.append(row);
         }
 
@@ -91,10 +91,14 @@ if (teamAttendance) {
             statusCell.append(statusBadge);
             row.append(statusCell);
 
-            appendCell(row, member.work_arrangement);
-            appendCell(row, member.work_date);
             appendCell(row, member.time_in);
             appendCell(row, member.time_out);
+            const arrangementCell = appendCell(row, '');
+            const arrangementBadge = document.createElement('span');
+            arrangementBadge.className = 'badge arrangement-badge';
+            arrangementBadge.textContent = member.work_arrangement ?? '—';
+            arrangementCell.append(arrangementBadge);
+            appendCell(row, member.work_date);
             rows.append(row);
         });
 

@@ -4,6 +4,7 @@ use App\Enums\UserRole;
 use App\Http\Controllers\Admin\AttendanceController as AdminAttendanceController;
 use App\Http\Controllers\Admin\AttendanceCorrectionController;
 use App\Http\Controllers\Admin\AttendanceReportController as AdminAttendanceReportController;
+use App\Http\Controllers\Admin\DashboardController as AdminDashboardController;
 use App\Http\Controllers\Admin\DepartmentController;
 use App\Http\Controllers\Admin\DepartmentDtrZipController as AdminDepartmentDtrZipController;
 use App\Http\Controllers\Admin\DepartmentHrAssignmentController;
@@ -14,6 +15,7 @@ use App\Http\Controllers\Admin\EmployeeInvitationController;
 use App\Http\Controllers\Auth\AuthenticatedSessionController;
 use App\Http\Controllers\Employee\AttendanceController;
 use App\Http\Controllers\Employee\AttendanceHistoryController;
+use App\Http\Controllers\Employee\DashboardController as EmployeeDashboardController;
 use App\Http\Controllers\Employee\DtrController as EmployeeDtrController;
 use App\Http\Controllers\Employee\TimeInController;
 use App\Http\Controllers\Employee\TimeOutController;
@@ -42,7 +44,7 @@ Route::post('/logout', [AuthenticatedSessionController::class, 'destroy'])
     ->name('logout');
 
 Route::middleware(['auth', 'account.active', 'role:'.UserRole::Admin->value])->group(function () {
-    Route::view('/admin/dashboard', 'admin.dashboard')->name('admin.dashboard');
+    Route::get('/admin/dashboard', AdminDashboardController::class)->name('admin.dashboard');
 
     Route::prefix('admin')->name('admin.')->middleware('can:manage-workforce')->group(function () {
         Route::resource('employees', EmployeeController::class)->except('destroy');
@@ -87,7 +89,7 @@ Route::middleware(['auth', 'account.active', 'role:'.UserRole::Admin->value])->g
 
 Route::middleware(['auth', 'account.active', 'role:'.UserRole::Employee->value])->group(function () {
     Route::prefix('employee')->name('employee.')->group(function () {
-        Route::view('/dashboard', 'employee.dashboard')->name('dashboard');
+        Route::get('/dashboard', EmployeeDashboardController::class)->name('dashboard');
         Route::get('/attendance', [AttendanceController::class, 'index'])->name('attendance.index');
         Route::post('/attendance/time-in', TimeInController::class)->name('attendance.time-in');
         Route::post('/attendance/time-out', TimeOutController::class)->name('attendance.time-out');

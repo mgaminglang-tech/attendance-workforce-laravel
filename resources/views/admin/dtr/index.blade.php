@@ -3,14 +3,14 @@
 @section('title', 'Employee DTR | '.config('app.name'))
 
 @section('content')
-    <div class="container py-4 py-md-5">
-        <div class="mb-4">
-            <span class="badge text-bg-primary mb-2">Global administration</span>
+    <div class="container-xxl page-shell">
+        <header class="page-header">
+            <span class="eyebrow">Global administration</span>
             <h1 class="h2 mb-1">Employee Monthly DTR</h1>
             <p class="text-body-secondary mb-0">Preview or download an employee's canonical attendance record.</p>
-        </div>
+        </header>
 
-        <div class="card border-0 shadow-sm">
+        <div class="card filter-panel">
             <div class="card-body p-3 p-md-4">
                 <form class="row g-3 align-items-end" method="GET" action="{{ route('admin.dtr.preview') }}">
                     <div class="col-12 col-lg-6">
