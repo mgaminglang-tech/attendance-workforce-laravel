@@ -10,6 +10,7 @@ use App\Models\Employee;
 use App\Models\User;
 use Carbon\CarbonImmutable;
 use Illuminate\Foundation\Testing\LazilyRefreshDatabase;
+use Illuminate\Support\Facades\Gate;
 use Tests\TestCase;
 
 class AttendanceReportTest extends TestCase
@@ -202,6 +203,20 @@ class AttendanceReportTest extends TestCase
         $this->actingAs($employee)->get(route('admin.reports.attendance.index'))->assertForbidden();
         $this->actingAs($employee)->get(route('hr.reports.attendance.index'))->assertForbidden();
         $this->actingAs($employee)->get(route('hr.reports.dtr.bulk', ['month' => '2026-09']))->assertForbidden();
+    }
+
+    public function test_inactive_hr_representative_cannot_access_assigned_department_reports(): void
+    {
+        $department = Department::factory()->create();
+        $representative = User::factory()->employee()->create();
+        Employee::factory()->for($representative)->for($department)->inactive()->create();
+        DepartmentHrAssignment::factory()->for($department)->for($representative)->create();
+
+        $this->assertFalse(Gate::forUser($representative)->allows('viewReports', $department));
+        $this->actingAs($representative)->get(route('hr.reports.attendance.index'))->assertForbidden();
+        $this->actingAs($representative)->get(route('hr.reports.dtr.bulk', [
+            'month' => '2026-09',
+        ]))->assertForbidden();
     }
 
     private function employeeIn(Department $department, string $name, string $employeeNumber): Employee

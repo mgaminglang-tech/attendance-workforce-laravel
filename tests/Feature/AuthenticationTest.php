@@ -43,6 +43,21 @@ class AuthenticationTest extends TestCase
         $this->assertNotNull($user->refresh()->last_login_at);
     }
 
+    public function test_login_regenerates_the_session_identifier(): void
+    {
+        $user = User::factory()->employee()->create();
+        $this->withSession(['session_marker' => 'preserved']);
+        $previousSessionId = session()->getId();
+
+        $this->post(route('login.store'), [
+            'email' => $user->email,
+            'password' => 'password',
+        ])->assertRedirect(route('employee.dashboard'));
+
+        $this->assertNotSame($previousSessionId, session()->getId());
+        $this->assertSame('preserved', session('session_marker'));
+    }
+
     public function test_active_admin_can_authenticate(): void
     {
         $user = User::factory()->admin()->create();
@@ -110,11 +125,15 @@ class AuthenticationTest extends TestCase
     public function test_logout_ends_the_authenticated_session(): void
     {
         $user = User::factory()->create();
+        $this->withSession(['session_marker' => 'remove-me']);
+        $previousSessionId = session()->getId();
 
         $response = $this->actingAs($user)->post(route('logout'));
 
         $response->assertRedirect(route('login'));
         $this->assertGuest();
+        $this->assertNotSame($previousSessionId, session()->getId());
+        $this->assertNull(session('session_marker'));
     }
 
     public function test_public_registration_routes_do_not_exist(): void

@@ -21,6 +21,9 @@ class DepartmentPolicy
         }
 
         return $user->hasRole(UserRole::Employee)
+            && $user->employee()
+                ->where('employment_status', EmploymentStatus::Active->value)
+                ->exists()
             && $user->hrDepartmentAssignment()
                 ->whereBelongsTo($department)
                 ->exists();

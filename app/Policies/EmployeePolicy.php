@@ -3,6 +3,7 @@
 namespace App\Policies;
 
 use App\Enums\AccountStatus;
+use App\Enums\EmploymentStatus;
 use App\Enums\UserRole;
 use App\Models\Employee;
 use App\Models\User;
@@ -23,8 +24,11 @@ class EmployeePolicy
             return false;
         }
 
-        return $user->hrDepartmentAssignment()
-            ->where('department_id', $employee->department_id)
-            ->exists();
+        return $user->employee()
+            ->where('employment_status', EmploymentStatus::Active->value)
+            ->exists()
+            && $user->hrDepartmentAssignment()
+                ->where('department_id', $employee->department_id)
+                ->exists();
     }
 }

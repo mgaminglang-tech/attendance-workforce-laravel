@@ -73,4 +73,17 @@ class HrDtrTest extends TestCase
             'month' => '2026-09',
         ]))->assertOk();
     }
+
+    public function test_inactive_hr_representative_cannot_access_assigned_employee_dtr(): void
+    {
+        $department = Department::factory()->create();
+        $representative = User::factory()->employee()->create();
+        Employee::factory()->for($representative)->for($department)->inactive()->create();
+        DepartmentHrAssignment::factory()->for($department)->for($representative)->create();
+        $employee = Employee::factory()->for($department)->create();
+        $query = ['employee' => $employee, 'month' => '2026-09'];
+
+        $this->actingAs($representative)->get(route('hr.dtr.preview', $query))->assertForbidden();
+        $this->actingAs($representative)->get(route('hr.dtr.pdf', $query))->assertForbidden();
+    }
 }
