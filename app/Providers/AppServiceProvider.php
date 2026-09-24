@@ -56,6 +56,16 @@ class AppServiceProvider extends ServiceProvider
                 && $user->hrDepartmentAssignment()->exists(),
         );
 
+        Gate::define(
+            'view-assigned-attendance-reports',
+            fn (User $user): bool => $user->hasRole(UserRole::Employee)
+                && $user->account_status === AccountStatus::Active
+                && $user->employee()
+                    ->where('employment_status', EmploymentStatus::Active->value)
+                    ->exists()
+                && $user->hrDepartmentAssignment()->exists(),
+        );
+
         RateLimiter::for('employee-invitation-resend', function (Request $request): Limit {
             return Limit::perMinute(3)->by('invitation-resend:'.$request->user()->getAuthIdentifier());
         });

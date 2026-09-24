@@ -3,7 +3,9 @@
 use App\Enums\UserRole;
 use App\Http\Controllers\Admin\AttendanceController as AdminAttendanceController;
 use App\Http\Controllers\Admin\AttendanceCorrectionController;
+use App\Http\Controllers\Admin\AttendanceReportController as AdminAttendanceReportController;
 use App\Http\Controllers\Admin\DepartmentController;
+use App\Http\Controllers\Admin\DepartmentDtrZipController as AdminDepartmentDtrZipController;
 use App\Http\Controllers\Admin\DepartmentHrAssignmentController;
 use App\Http\Controllers\Admin\DtrController as AdminDtrController;
 use App\Http\Controllers\Admin\EmployeeAccountController;
@@ -15,6 +17,9 @@ use App\Http\Controllers\Employee\AttendanceHistoryController;
 use App\Http\Controllers\Employee\DtrController as EmployeeDtrController;
 use App\Http\Controllers\Employee\TimeInController;
 use App\Http\Controllers\Employee\TimeOutController;
+use App\Http\Controllers\Hr\AttendanceReportController as HrAttendanceReportController;
+use App\Http\Controllers\Hr\DepartmentDtrZipController as HrDepartmentDtrZipController;
+use App\Http\Controllers\Hr\DtrController as HrDtrController;
 use App\Http\Controllers\InvitationController;
 use App\Http\Controllers\TeamAttendanceController;
 use Illuminate\Support\Facades\Route;
@@ -71,6 +76,12 @@ Route::middleware(['auth', 'account.active', 'role:'.UserRole::Admin->value])->g
         Route::get('dtr', [AdminDtrController::class, 'index'])->name('dtr.index');
         Route::get('dtr/preview', [AdminDtrController::class, 'preview'])->name('dtr.preview');
         Route::get('dtr/pdf', [AdminDtrController::class, 'pdf'])->name('dtr.pdf');
+
+        Route::get('reports/attendance', [AdminAttendanceReportController::class, 'index'])
+            ->name('reports.attendance.index');
+        Route::get('reports/dtr/bulk', AdminDepartmentDtrZipController::class)
+            ->middleware('throttle:5,1')
+            ->name('reports.dtr.bulk');
     });
 });
 
@@ -94,6 +105,15 @@ Route::middleware(['auth', 'account.active', 'role:'.UserRole::Employee->value])
         ->name('hr.team-attendance.index');
     Route::get('/hr/team-attendance/status', [TeamAttendanceController::class, 'hrStatus'])
         ->name('hr.team-attendance.status');
+    Route::get('/hr/reports/attendance', [HrAttendanceReportController::class, 'index'])
+        ->name('hr.reports.attendance.index');
+    Route::get('/hr/reports/dtr/bulk', HrDepartmentDtrZipController::class)
+        ->middleware('throttle:5,1')
+        ->name('hr.reports.dtr.bulk');
+    Route::get('/hr/employees/{employee}/dtr', [HrDtrController::class, 'preview'])
+        ->name('hr.dtr.preview');
+    Route::get('/hr/employees/{employee}/dtr/pdf', [HrDtrController::class, 'pdf'])
+        ->name('hr.dtr.pdf');
 });
 
 Route::middleware(['guest', 'throttle:employee-invitation-accept'])->group(function () {

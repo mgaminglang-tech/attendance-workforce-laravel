@@ -8,6 +8,10 @@ use Carbon\CarbonImmutable;
 
 class BuildMonthlyDtr
 {
+    public function __construct(
+        private CalculateNetAttendanceMinutes $calculateNetAttendanceMinutes,
+    ) {}
+
     /**
      * @return array{
      *     employee: Employee,
@@ -37,7 +41,6 @@ class BuildMonthlyDtr
     public function handle(Employee $employee, CarbonImmutable $selectedMonth): array
     {
         $timezone = config('app.timezone');
-        $breakMinutes = max(0, (int) config('workforce.dtr.break_minutes'));
         $firstDate = $selectedMonth->setTimezone($timezone)->startOfMonth()->startOfDay();
         $lastDate = $firstDate->endOfMonth()->startOfDay();
 
@@ -66,10 +69,9 @@ class BuildMonthlyDtr
         for ($date = $firstDate; $date->lessThanOrEqualTo($lastDate); $date = $date->addDay()) {
             /** @var AttendanceSession|null $session */
             $session = $sessions->get($date->toDateString());
-            $grossMinutes = $session?->workedMinutes();
-            $netMinutes = $grossMinutes === null
+            $netMinutes = $session === null
                 ? null
-                : max(0, $grossMinutes - $breakMinutes);
+                : $this->calculateNetAttendanceMinutes->handle($session);
 
             $rows[] = [
                 'date' => $date,

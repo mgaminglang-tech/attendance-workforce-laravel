@@ -100,3 +100,23 @@ body {
 .dtr-preview-table tbody th:first-child {
     background-color: var(--bs-body-bg);
 }
+
+.report-table {
+    max-height: 72vh;
+}
+
+.report-table th,
+.report-table td {
+    min-width: 7rem;
+}
+
+.report-table th:nth-child(2),
+.report-table td:nth-child(2) {
+    min-width: 12rem;
+}
+
+@media (max-width: 575.98px) {
+    .pagination {
+        flex-wrap: wrap;
+    }
+}

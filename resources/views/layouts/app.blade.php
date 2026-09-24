@@ -19,13 +19,15 @@
                     <span class="navbar-toggler-icon"></span>
                 </button>
                 <div class="collapse navbar-collapse" id="main-navigation">
-                    <div class="navbar-nav ms-auto align-items-lg-center gap-lg-3 py-3 py-lg-0">
+                    <div class="navbar-nav ms-auto align-items-lg-center gap-lg-2 py-3 py-lg-0">
                     @can('manage-workforce')
+                        <a class="nav-link" href="{{ route('admin.dashboard') }}">Dashboard</a>
                         <a class="nav-link" href="{{ route('admin.employees.index') }}">Employees</a>
                         <a class="nav-link" href="{{ route('admin.departments.index') }}">Departments</a>
                         <a class="nav-link" href="{{ route('admin.attendance.index') }}">Attendance</a>
                         <a class="nav-link" href="{{ route('admin.team-attendance.index') }}">Team Attendance</a>
                         <a class="nav-link" href="{{ route('admin.dtr.index') }}">DTR</a>
+                        <a class="nav-link" href="{{ route('admin.reports.attendance.index') }}">Reports</a>
                     @endcan
                     @if (auth()->user()->role === \App\Enums\UserRole::Employee)
                         <a class="nav-link" href="{{ route('employee.attendance.index') }}">Attendance</a>
@@ -37,6 +39,9 @@
                     @endcan
                     @can('view-assigned-team-attendance')
                         <a class="nav-link" href="{{ route('hr.team-attendance.index') }}">HR Workspace</a>
+                    @endcan
+                    @can('view-assigned-attendance-reports')
+                        <a class="nav-link" href="{{ route('hr.reports.attendance.index') }}">Reports</a>
                     @endcan
                     <form method="POST" action="{{ route('logout') }}">
                         @csrf

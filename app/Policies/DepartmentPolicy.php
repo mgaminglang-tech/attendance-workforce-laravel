@@ -10,6 +10,22 @@ use App\Models\User;
 
 class DepartmentPolicy
 {
+    public function viewReports(User $user, Department $department): bool
+    {
+        if ($user->account_status !== AccountStatus::Active) {
+            return false;
+        }
+
+        if ($user->hasRole(UserRole::Admin)) {
+            return true;
+        }
+
+        return $user->hasRole(UserRole::Employee)
+            && $user->hrDepartmentAssignment()
+                ->whereBelongsTo($department)
+                ->exists();
+    }
+
     public function viewTeamAttendance(User $user, Department $department): bool
     {
         if ($user->account_status !== AccountStatus::Active) {
