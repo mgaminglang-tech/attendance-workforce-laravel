@@ -6,6 +6,7 @@ use App\Models\AttendanceSession;
 use App\Models\Department;
 use App\Models\DepartmentHrAssignment;
 use App\Models\Employee;
+use App\Models\EmployeeLeaveDay;
 use App\Models\User;
 use Illuminate\Foundation\Testing\LazilyRefreshDatabase;
 use Tests\TestCase;
@@ -33,6 +34,7 @@ class HrDtrTest extends TestCase
             ->for(Department::factory()->create())
             ->create(['employee_number' => 'OTHER-TEAM']);
         AttendanceSession::factory()->for($employee)->create(['work_date' => '2026-09-12']);
+        EmployeeLeaveDay::factory()->for($employee)->create(['leave_date' => '2026-09-13']);
 
         $this->actingAs($representative)->get(route('hr.dtr.preview', [
             'employee' => $employee,
@@ -42,6 +44,7 @@ class HrDtrTest extends TestCase
             ->assertSee('type="month"', false)
             ->assertSee('value="2026-09"', false)
             ->assertSee('Historical Employee')
+            ->assertSee('ON LEAVE')
             ->assertSee('Finance Colleague')
             ->assertSee('data-employee-number="FIN-TEAM"', false)
             ->assertSee('data-employee-picker-action="true"', false)

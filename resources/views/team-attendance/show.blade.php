@@ -12,6 +12,7 @@
                     <span><strong data-summary="total">{{ $teamAttendance['summary']['total'] }}</strong> members</span>
                     <span><strong data-summary="working">{{ $teamAttendance['summary']['working'] }}</strong> working</span>
                     <span><strong data-summary="completed">{{ $teamAttendance['summary']['completed'] }}</strong> completed</span>
+                    <span><strong data-summary="on_leave">{{ $teamAttendance['summary']['on_leave'] }}</strong> on leave</span>
                     <span><strong data-summary="not_clocked_in">{{ $teamAttendance['summary']['not_clocked_in'] }}</strong> not clocked in</span>
                 </p>
             </div>
@@ -35,7 +36,7 @@
                     @if ($loop->first || $event['date_label'] !== $teamAttendance['activity'][$loop->index - 1]['date_label'])
                         <li class="feed-date-separator" aria-label="{{ $event['date_label'] }}"><span>{{ $event['date_label'] }}</span></li>
                     @endif
-                    <li class="attendance-event {{ $event['event'] === 'Not Clocked In' ? 'attendance-event-muted' : '' }}">
+                    <li class="attendance-event {{ $event['event'] === 'Not Clocked In' ? 'attendance-event-muted' : ($event['event'] === 'On Leave' ? 'attendance-event-leave' : '') }}">
                         <span class="avatar attendance-avatar" aria-hidden="true">{{ $event['employee_initials'] }}</span>
                         <div class="attendance-event-content">
                             <div class="attendance-event-main">

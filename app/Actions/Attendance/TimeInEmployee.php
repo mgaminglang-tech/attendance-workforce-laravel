@@ -51,6 +51,10 @@ class TimeInEmployee
                 throw AttendanceActionException::workDateCompleted();
             }
 
+            if ($employee->leaveDays()->whereDate('leave_date', $workDate)->exists()) {
+                throw AttendanceActionException::todayIsLeave();
+            }
+
             $attendanceSession = new AttendanceSession;
             $attendanceSession->forceFill([
                 'work_date' => $workDate,

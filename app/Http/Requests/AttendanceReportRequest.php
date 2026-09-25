@@ -57,7 +57,7 @@ class AttendanceReportRequest extends FormRequest
                     'not_recorded',
                 ]),
             ],
-            'state' => ['nullable', Rule::in(['open', 'completed'])],
+            'state' => ['nullable', Rule::in(['open', 'completed', 'on_leave'])],
         ];
     }
 

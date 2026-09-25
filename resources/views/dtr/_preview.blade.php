@@ -50,7 +50,7 @@
                             <td>
                                 @if ($row['has_legacy_arrangement'])
                                     <span class="badge arrangement-badge">Not recorded</span>
-                                @else
+                                @elseif ($row['work_arrangement'] !== null)
                                     <span class="badge arrangement-badge">{{ $row['work_arrangement'] }}</span>
                                 @endif
                             </td>

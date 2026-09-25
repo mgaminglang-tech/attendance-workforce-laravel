@@ -6,6 +6,7 @@ use App\Models\AttendanceSession;
 use App\Models\Department;
 use App\Models\DepartmentHrAssignment;
 use App\Models\Employee;
+use App\Models\EmployeeLeaveDay;
 use App\Models\User;
 use App\Services\MonthlyDtrPdf;
 use Illuminate\Foundation\Testing\LazilyRefreshDatabase;
@@ -72,6 +73,64 @@ class DepartmentDtrZipTest extends TestCase
         $this->assertSame(
             ['DTR_IT-001_2026-09.pdf'],
             array_keys($this->zipEntries($itResponse->getContent())),
+        );
+    }
+
+    public function test_bulk_zip_pdf_uses_the_shared_conditional_net_hours(): void
+    {
+        $admin = User::factory()->admin()->create();
+        $department = Department::factory()->create();
+        $employee = Employee::factory()->for($department)->create(['employee_number' => 'FIN-001']);
+        AttendanceSession::factory()->for($employee)->create([
+            'work_date' => '2026-09-10',
+            'time_in_at' => '2026-09-10 08:00:00',
+            'time_out_at' => '2026-09-10 13:22:00',
+        ]);
+        $this->mock(MonthlyDtrPdf::class, function ($mock): void {
+            $mock->shouldReceive('filename')->once()->andReturn('DTR_FIN-001_2026-09.pdf');
+            $mock->shouldReceive('render')
+                ->once()
+                ->withArgs(fn (array $dtr): bool => $dtr['rows'][9]['total_hours'] === '5.37')
+                ->andReturn('%PDF-1.4 shared net hours');
+        });
+
+        $response = $this->actingAs($admin)->get(route('admin.reports.dtr.bulk', [
+            'department' => $department->id,
+            'month' => '2026-09',
+        ]));
+
+        $response->assertOk();
+        $this->assertSame(
+            '%PDF-1.4 shared net hours',
+            $this->zipEntries($response->getContent())['DTR_FIN-001_2026-09.pdf'],
+        );
+    }
+
+    public function test_bulk_zip_uses_the_shared_leave_rows(): void
+    {
+        $admin = User::factory()->admin()->create();
+        $department = Department::factory()->create();
+        $employee = Employee::factory()->for($department)->create(['employee_number' => 'FIN-001']);
+        EmployeeLeaveDay::factory()->for($employee)->create(['leave_date' => '2026-09-10']);
+        $this->mock(MonthlyDtrPdf::class, function ($mock): void {
+            $mock->shouldReceive('filename')->once()->andReturn('DTR_FIN-001_2026-09.pdf');
+            $mock->shouldReceive('render')
+                ->once()
+                ->withArgs(fn (array $dtr): bool => $dtr['rows'][9]['attendance_rendered'] === 'ON LEAVE'
+                    && $dtr['rows'][9]['time_in'] === ''
+                    && $dtr['rows'][9]['total_hours'] === '')
+                ->andReturn('%PDF-1.4 shared leave row');
+        });
+
+        $response = $this->actingAs($admin)->get(route('admin.reports.dtr.bulk', [
+            'department' => $department->id,
+            'month' => '2026-09',
+        ]));
+
+        $response->assertOk();
+        $this->assertSame(
+            '%PDF-1.4 shared leave row',
+            $this->zipEntries($response->getContent())['DTR_FIN-001_2026-09.pdf'],
         );
     }
 

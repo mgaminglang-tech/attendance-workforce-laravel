@@ -650,6 +650,12 @@ legend {
     color: var(--workforce-warning);
 }
 
+.status-badge-leave {
+    border-color: #ecd9a9;
+    background: #fff3cd;
+    color: #765a00;
+}
+
 .status-badge-disabled,
 .status-badge-inactive,
 .status-badge-neutral {
@@ -924,6 +930,11 @@ legend {
     gap: 1rem;
 }
 
+.attendance-primary-column {
+    display: grid;
+    gap: 1rem;
+}
+
 .attendance-console-header {
     display: grid;
     gap: 0.8rem;
@@ -956,6 +967,95 @@ legend {
 .status-indicator-neutral {
     background: #eef1f3;
     color: #52616f;
+}
+
+.status-indicator-leave {
+    background: #fff3cd;
+    color: #765a00;
+}
+
+.leave-today-notice {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.75rem;
+    padding: 0.85rem;
+    border: 1px solid #eadba6;
+    border-radius: 0.4rem;
+    background: #fffaf0;
+    color: var(--workforce-text);
+}
+
+.leave-today-notice > .ti {
+    margin-top: 0.1rem;
+    color: #8a6900;
+    font-size: 1.2rem;
+}
+
+.leave-today-notice p {
+    color: var(--workforce-muted);
+    font-size: 0.82rem;
+}
+
+.leave-panel {
+    border: 1px solid var(--workforce-border);
+    border-radius: var(--workforce-radius);
+    background: var(--workforce-surface);
+}
+
+.leave-panel-header {
+    display: grid;
+    gap: 1rem;
+    padding: 1.15rem;
+}
+
+.leave-open-button {
+    min-height: 2.75rem;
+}
+
+.leave-upcoming {
+    padding: 1.15rem;
+    border-top: 1px solid var(--workforce-border);
+}
+
+.leave-upcoming h3 {
+    margin: 0 0 0.75rem;
+    font-size: 0.78rem;
+    font-weight: 750;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+}
+
+.leave-day-list {
+    display: grid;
+    gap: 0.25rem;
+}
+
+.leave-day-row {
+    display: flex;
+    min-height: 3.25rem;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    padding: 0.55rem 0;
+    border-top: 1px solid #edf0f2;
+}
+
+.leave-day-row:first-child {
+    border-top: 0;
+}
+
+.leave-day-row strong,
+.leave-day-row span {
+    display: block;
+}
+
+.leave-day-row strong {
+    font-size: 0.88rem;
+}
+
+.leave-day-row span {
+    color: var(--workforce-muted);
+    font-size: 0.74rem;
 }
 
 .attendance-session {
@@ -1258,6 +1358,11 @@ legend {
     border-color: #d7dcdf;
     background: #f0f2f3;
     color: #687580;
+}
+
+.attendance-event-leave .attendance-avatar {
+    background: #fff3cd;
+    color: #765a00;
 }
 
 .attendance-event-content {
@@ -1682,6 +1787,11 @@ legend {
         align-items: start;
     }
 
+    .leave-panel-header {
+        grid-template-columns: minmax(0, 1fr) auto;
+        align-items: center;
+    }
+
     .work-arrangement-grid {
         grid-template-columns: repeat(3, minmax(0, 1fr));
     }
@@ -1774,6 +1884,11 @@ legend {
     }
 
     #bulk-dtr-modal .modal-footer .btn {
+        width: 100%;
+    }
+
+    .leave-open-button,
+    #record-leave-modal .modal-footer .btn {
         width: 100%;
     }
 }

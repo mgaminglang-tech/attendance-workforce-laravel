@@ -7,6 +7,7 @@ use App\Models\AttendanceSession;
 use App\Models\Department;
 use App\Models\DepartmentHrAssignment;
 use App\Models\Employee;
+use App\Models\EmployeeLeaveDay;
 use App\Models\User;
 use Illuminate\Foundation\Testing\LazilyRefreshDatabase;
 use Tests\TestCase;
@@ -29,6 +30,7 @@ class AdminDtrTest extends TestCase
             'time_out_at' => '2026-09-12 16:30:00',
             'work_arrangement' => WorkArrangement::FieldBased,
         ]);
+        EmployeeLeaveDay::factory()->for($employee)->create(['leave_date' => '2026-09-13']);
 
         $this->actingAs($admin)->get(route('admin.dtr.index'))
             ->assertOk()
@@ -49,6 +51,7 @@ class AdminDtrTest extends TestCase
             ->assertSee('Remote Operations')
             ->assertSee('7:45 AM')
             ->assertSee('FIELD-BASED')
+            ->assertSee('ON LEAVE')
             ->assertViewHas('dtr', fn (array $dtr): bool => $dtr['employee']->is($employee));
     }
 

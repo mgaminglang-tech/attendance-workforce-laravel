@@ -17,7 +17,7 @@ class TeamAttendanceService
     /**
      * @return array{
      *     department: array{id: int, name: string},
-     *     summary: array{total: int, working: int, completed: int, not_clocked_in: int},
+     *     summary: array{total: int, working: int, completed: int, on_leave: int, not_clocked_in: int},
      *     activity: list<array{employee_name: string, employee_initials: string, is_hr_representative: bool, event: string, event_time: ?string, occurred_at: ?string, date_label: string, work_arrangement: ?string, net_hours: ?string}>,
      *     last_updated: string
      * }
@@ -41,6 +41,9 @@ class TeamAttendanceService
                             ->orWhereDate('work_date', $workDate);
                     })
                     ->orderByDesc('time_in_at'),
+                'leaveDays' => fn ($query) => $query
+                    ->select(['id', 'employee_id', 'leave_date'])
+                    ->whereDate('leave_date', $workDate),
             ])
             ->orderBy('employee_number')
             ->get();
@@ -48,22 +51,26 @@ class TeamAttendanceService
         $employeeStates = $employees->map(function (Employee $employee) use ($workDate): array {
             $openSession = $this->openSession($employee);
             $currentSession = $openSession ?? $this->completedSessionForWorkDate($employee, $workDate);
+            $isOnLeave = $currentSession === null && $employee->leaveDays->isNotEmpty();
             $status = match (true) {
                 $openSession !== null => 'Working',
                 $currentSession !== null => 'Completed',
+                $isOnLeave => 'On Leave',
                 default => 'Not clocked in',
             };
 
-            return compact('employee', 'currentSession', 'status');
+            return compact('employee', 'currentSession', 'isOnLeave', 'status');
         });
 
         $activityEvents = $employeeStates
             ->flatMap(fn (array $state): array => $this->activityEvents(
                 $state['employee'],
                 $state['currentSession'],
+                $state['isOnLeave'],
                 $department->hrAssignment?->user_id,
                 $now,
-            ));
+            ))
+            ->reject(fn (array $event): bool => $event['is_hr_representative']);
         $activity = $activityEvents
             ->where('date_label', 'Today')
             ->sortByDesc('occurred_at')
@@ -80,6 +87,7 @@ class TeamAttendanceService
                 'total' => $employeeStates->count(),
                 'working' => $employeeStates->where('status', 'Working')->count(),
                 'completed' => $employeeStates->where('status', 'Completed')->count(),
+                'on_leave' => $employeeStates->where('status', 'On Leave')->count(),
                 'not_clocked_in' => $employeeStates->where('status', 'Not clocked in')->count(),
             ],
             'activity' => $activity->all(),
@@ -108,6 +116,7 @@ class TeamAttendanceService
     private function activityEvents(
         Employee $employee,
         ?AttendanceSession $session,
+        bool $isOnLeave,
         ?int $hrRepresentativeUserId,
         CarbonImmutable $now,
     ): array {
@@ -121,7 +130,7 @@ class TeamAttendanceService
         if ($session === null) {
             return [[
                 ...$shared,
-                'event' => 'Not Clocked In',
+                'event' => $isOnLeave ? 'On Leave' : 'Not Clocked In',
                 'event_time' => null,
                 'occurred_at' => null,
                 'date_label' => 'Today',

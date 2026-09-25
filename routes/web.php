@@ -19,6 +19,8 @@ use App\Http\Controllers\Employee\AttendanceController;
 use App\Http\Controllers\Employee\AttendanceHistoryController;
 use App\Http\Controllers\Employee\DashboardController as EmployeeDashboardController;
 use App\Http\Controllers\Employee\DtrController as EmployeeDtrController;
+use App\Http\Controllers\Employee\RecordLeaveController;
+use App\Http\Controllers\Employee\RemoveLeaveController;
 use App\Http\Controllers\Employee\TimeInController;
 use App\Http\Controllers\Employee\TimeOutController;
 use App\Http\Controllers\Hr\AttendanceReportController as HrAttendanceReportController;
@@ -105,6 +107,8 @@ Route::middleware(['auth', 'account.active', 'role:'.UserRole::Employee->value])
         Route::get('/attendance', [AttendanceController::class, 'index'])->name('attendance.index');
         Route::post('/attendance/time-in', TimeInController::class)->name('attendance.time-in');
         Route::post('/attendance/time-out', TimeOutController::class)->name('attendance.time-out');
+        Route::post('/attendance/leave', RecordLeaveController::class)->name('attendance.leave.store');
+        Route::delete('/attendance/leave/{leaveDay}', RemoveLeaveController::class)->name('attendance.leave.destroy');
         Route::get('/attendance/history', AttendanceHistoryController::class)->name('attendance.history');
         Route::get('/dtr', [EmployeeDtrController::class, 'index'])->name('dtr.index');
         Route::get('/dtr/preview', [EmployeeDtrController::class, 'preview'])->name('dtr.preview');

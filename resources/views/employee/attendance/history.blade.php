@@ -8,7 +8,7 @@
             <div>
                 <span class="eyebrow">Employee attendance</span>
                 <h1 class="h2 mb-1">Attendance history</h1>
-                <p class="text-body-secondary mb-0">Your attendance sessions, newest work date first.</p>
+                <p class="text-body-secondary mb-0">Your attendance sessions and recorded leave, newest date first.</p>
             </div>
             <a class="btn btn-sm btn-outline-secondary align-self-start" href="{{ route('employee.attendance.index') }}">
                 <i class="ti ti-arrow-left me-1" aria-hidden="true"></i>Back to timekeeping
@@ -17,28 +17,31 @@
 
         <div class="card surface-card">
             <div class="attendance-history-mobile d-md-none">
-                @forelse ($attendanceSessions as $attendanceSession)
-                    @php($workedMinutes = $attendanceSession->workedMinutes())
+                @forelse ($historyRecords as $record)
                     <article class="attendance-history-record" data-attendance-mobile-record>
                         <div class="d-flex justify-content-between align-items-start gap-3">
                             <div>
-                                <p class="attendance-history-date mb-1">{{ $attendanceSession->work_date->format('M j, Y') }}</p>
-                                <p class="attendance-history-times mb-0">
-                                    {{ $attendanceSession->time_in_at->format('g:i A') }}
-                                    <i class="ti ti-arrow-right" aria-hidden="true"></i>
-                                    {{ $attendanceSession->time_out_at?->format('g:i A') ?? 'Still working' }}
-                                </p>
+                                <p class="attendance-history-date mb-1">{{ $record['date']->format('M j, Y') }}</p>
+                                @if ($record['type'] === 'attendance')
+                                    <p class="attendance-history-times mb-0">
+                                        {{ $record['time_in_at']->format('g:i A') }}
+                                        <i class="ti ti-arrow-right" aria-hidden="true"></i>
+                                        {{ $record['time_out_at']?->format('g:i A') ?? 'Still working' }}
+                                    </p>
+                                @endif
                             </div>
-                            <span class="badge status-badge {{ $workedMinutes === null ? 'status-badge-working' : 'status-badge-completed' }}">
-                                {{ $workedMinutes === null ? 'Working' : 'Completed' }}
+                            <span class="badge status-badge {{ $record['status'] === 'On Leave' ? 'status-badge-leave' : ($record['status'] === 'Working' ? 'status-badge-working' : 'status-badge-completed') }}">
+                                {{ $record['status'] }}
                             </span>
                         </div>
-                        <div class="attendance-history-meta">
-                            <span class="badge arrangement-badge">{{ $attendanceSession->work_arrangement?->label() ?? 'Not recorded' }}</span>
-                            @if ($workedMinutes !== null)
-                                <span class="attendance-history-duration">Duration: {{ intdiv($workedMinutes, 60) }}h {{ $workedMinutes % 60 }}m</span>
-                            @endif
-                        </div>
+                        @if ($record['type'] === 'attendance')
+                            <div class="attendance-history-meta">
+                                <span class="badge arrangement-badge">{{ $record['work_arrangement'] ?? 'Not recorded' }}</span>
+                                @if ($record['worked_minutes'] !== null)
+                                    <span class="attendance-history-duration">Duration: {{ intdiv($record['worked_minutes'], 60) }}h {{ $record['worked_minutes'] % 60 }}m</span>
+                                @endif
+                            </div>
+                        @endif
                     </article>
                 @empty
                     <p class="empty-state mb-0">No attendance records found.</p>
@@ -57,18 +60,27 @@
                         </tr>
                     </thead>
                     <tbody>
-                        @forelse ($attendanceSessions as $attendanceSession)
-                            @php($workedMinutes = $attendanceSession->workedMinutes())
+                        @forelse ($historyRecords as $record)
                             <tr>
-                                <td class="fw-semibold">{{ $attendanceSession->work_date->format('M j, Y') }}</td>
-                                <td>{{ $attendanceSession->time_in_at->format('M j, Y g:i:s A') }}</td>
-                                <td>{{ $attendanceSession->time_out_at?->format('M j, Y g:i:s A') ?? 'Still working' }}</td>
-                                <td><span class="badge arrangement-badge">{{ $attendanceSession->work_arrangement?->label() ?? 'Not recorded' }}</span></td>
+                                <td class="fw-semibold">{{ $record['date']->format('M j, Y') }}</td>
+                                <td>{{ $record['time_in_at']?->format('M j, Y g:i:s A') ?? '—' }}</td>
+                                <td>{{ $record['type'] === 'leave' ? '—' : ($record['time_out_at']?->format('M j, Y g:i:s A') ?? 'Still working') }}</td>
                                 <td>
-                                    @if ($workedMinutes === null)
+                                    @if ($record['work_arrangement'] !== null)
+                                        <span class="badge arrangement-badge">{{ $record['work_arrangement'] }}</span>
+                                    @elseif ($record['type'] === 'attendance')
+                                        <span class="badge arrangement-badge">Not recorded</span>
+                                    @else
+                                        —
+                                    @endif
+                                </td>
+                                <td>
+                                    @if ($record['type'] === 'leave')
+                                        <span class="badge status-badge status-badge-leave">On Leave</span>
+                                    @elseif ($record['worked_minutes'] === null)
                                         <span class="badge status-badge status-badge-working">Working</span>
                                     @else
-                                        {{ intdiv($workedMinutes, 60) }}h {{ $workedMinutes % 60 }}m
+                                        {{ intdiv($record['worked_minutes'], 60) }}h {{ $record['worked_minutes'] % 60 }}m
                                     @endif
                                 </td>
                             </tr>
@@ -80,9 +92,9 @@
                     </tbody>
                 </table>
             </div>
-            @if ($attendanceSessions->hasPages())
+            @if ($historyRecords->hasPages())
                 <div class="card-footer bg-white py-3">
-                    {{ $attendanceSessions->links() }}
+                    {{ $historyRecords->links() }}
                 </div>
             @endif
         </div>

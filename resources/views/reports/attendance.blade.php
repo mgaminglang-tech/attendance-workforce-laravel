@@ -89,6 +89,7 @@
                                 <option value="">All</option>
                                 <option value="open" @selected($filters->state === 'open')>Open</option>
                                 <option value="completed" @selected($filters->state === 'completed')>Completed</option>
+                                <option value="on_leave" @selected($filters->state === 'on_leave')>On Leave</option>
                             </select>
                         </div>
                     </div>
@@ -105,6 +106,7 @@
             <div class="col-6 col-xl"><div class="card metric-card h-100"><div class="card-body"><p class="detail-label mb-1">Employees</p><p class="metric-value">{{ $summary['unique_employees'] }}</p></div></div></div>
             <div class="col-6 col-xl"><div class="card metric-card h-100"><div class="card-body"><p class="detail-label mb-1">Completed</p><p class="metric-value">{{ $summary['completed'] }}</p></div></div></div>
             <div class="col-6 col-xl"><div class="card metric-card h-100"><div class="card-body"><p class="detail-label mb-1">Open</p><p class="metric-value text-success">{{ $summary['open'] }}</p></div></div></div>
+            <div class="col-6 col-xl"><div class="card metric-card h-100"><div class="card-body"><p class="detail-label mb-1">On Leave</p><p class="metric-value">{{ $summary['on_leave'] }}</p></div></div></div>
             <div class="col-12 col-xl"><div class="card metric-card h-100"><div class="card-body"><p class="detail-label mb-1">Total Net Hours</p><p class="metric-value">{{ $summary['total_net_hours'] }}</p></div></div></div>
         </div>
 
@@ -139,11 +141,15 @@
                                 </td>
                                 <td>{{ $session['department_name'] }}</td>
                                 <td class="text-nowrap">{{ $session['time_in'] }}</td>
-                                <td class="text-nowrap">{{ $session['time_out'] !== '' ? $session['time_out'] : '—' }}</td>
-                                <td><span class="badge arrangement-badge">{{ $session['work_arrangement'] }}</span></td>
-                                <td>{{ $session['net_hours'] !== '' ? $session['net_hours'] : '—' }}</td>
+                                <td class="text-nowrap">{{ $session['status'] === 'On Leave' ? '' : ($session['time_out'] !== '' ? $session['time_out'] : '—') }}</td>
                                 <td>
-                                    <span class="badge status-badge {{ $session['status'] === 'Completed' ? 'status-badge-completed' : 'status-badge-working' }}">
+                                    @if ($session['work_arrangement'] !== null)
+                                        <span class="badge arrangement-badge">{{ $session['work_arrangement'] }}</span>
+                                    @endif
+                                </td>
+                                <td>{{ $session['status'] === 'On Leave' ? '' : ($session['net_hours'] !== '' ? $session['net_hours'] : '—') }}</td>
+                                <td>
+                                    <span class="badge status-badge {{ $session['status'] === 'On Leave' ? 'status-badge-leave' : ($session['status'] === 'Completed' ? 'status-badge-completed' : 'status-badge-working') }}">
                                         {{ $session['status'] }}
                                     </span>
                                 </td>

@@ -265,6 +265,7 @@ if (teamAttendance) {
     const refreshError = teamAttendance.querySelector('[data-refresh-error]');
     const initialPayload = JSON.parse(teamAttendance.querySelector('[data-team-initial-payload]').textContent);
     let activitySignature = JSON.stringify(initialPayload.activity);
+    let refreshInFlight = false;
     const renderActivity = (activity) => {
         const nextSignature = JSON.stringify(activity);
 
@@ -306,7 +307,7 @@ if (teamAttendance) {
 
             item.className = event.event === 'Not Clocked In'
                 ? 'attendance-event attendance-event-muted'
-                : 'attendance-event';
+                : (event.event === 'On Leave' ? 'attendance-event attendance-event-leave' : 'attendance-event');
             avatar.className = 'avatar attendance-avatar';
             avatar.setAttribute('aria-hidden', 'true');
             avatar.textContent = event.employee_initials;
@@ -354,9 +355,11 @@ if (teamAttendance) {
         activitySignature = nextSignature;
     };
     const refreshTeamAttendance = async () => {
-        if (document.hidden) {
+        if (document.hidden || refreshInFlight) {
             return;
         }
+
+        refreshInFlight = true;
 
         try {
             const response = await fetch(teamAttendance.dataset.statusUrl, {
@@ -380,6 +383,8 @@ if (teamAttendance) {
             refreshError.classList.add('d-none');
         } catch {
             refreshError.classList.remove('d-none');
+        } finally {
+            refreshInFlight = false;
         }
     };
 

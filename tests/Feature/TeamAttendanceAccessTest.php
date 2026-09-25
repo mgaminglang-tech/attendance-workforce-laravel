@@ -114,7 +114,7 @@ class TeamAttendanceAccessTest extends TestCase
             ->assertDontSee($privateEmail);
     }
 
-    public function test_workspace_marks_only_the_current_department_hr_representative_in_the_activity_feed(): void
+    public function test_workspace_excludes_the_current_department_hr_representative_from_the_activity_feed(): void
     {
         $this->travelTo(CarbonImmutable::parse('2026-09-24 18:00:00', 'Asia/Manila'));
         $department = Department::factory()->create(['name' => 'Finance']);
@@ -122,7 +122,7 @@ class TeamAttendanceAccessTest extends TestCase
         [$representative, $hrEmployee] = $this->employeeIn($department);
         [$regularUser, $regularEmployee] = $this->employeeIn($department);
         DepartmentHrAssignment::factory()->for($department)->for($representative)->create();
-        AttendanceSession::factory()->for($hrEmployee)->create([
+        $hrAttendanceSession = AttendanceSession::factory()->for($hrEmployee)->create([
             'work_date' => '2026-09-24',
             'time_in_at' => '2026-09-24 08:00:00',
             'time_out_at' => '2026-09-24 16:56:00',
@@ -135,14 +135,18 @@ class TeamAttendanceAccessTest extends TestCase
         $response = $this->actingAs($viewer)->get(route('team-attendance.index'))
             ->assertOk()
             ->assertSee('Attendance thread')
-            ->assertSee('HR Representative', false)
-            ->assertSee($representative->name)
+            ->assertDontSee('aria-label="HR Representative"', false)
+            ->assertDontSee($representative->name)
             ->assertSee($regularUser->name)
             ->assertDontSee('7.93 hrs worked')
             ->assertSee('Not Clocked In')
             ->assertDontSee('Team status');
 
-        $this->assertSame(2, substr_count($response->getContent(), 'aria-label="HR Representative"'));
+        $this->assertStringContainsString('<strong data-summary="total">3</strong> members', $response->getContent());
+        $this->assertStringContainsString('<strong data-summary="working">1</strong> working', $response->getContent());
+        $this->assertStringContainsString('<strong data-summary="completed">1</strong> completed', $response->getContent());
+        $this->assertStringContainsString('<strong data-summary="not_clocked_in">1</strong> not clocked in', $response->getContent());
+        $this->assertModelExists($hrAttendanceSession);
         $response->assertDontSee('message input')->assertDontSee('Send message');
     }
 

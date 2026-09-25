@@ -1,21 +1,30 @@
+@php
+    $isWorking = $currentSession !== null && $currentSession->time_out_at === null;
+    $isCompleted = $currentSession !== null && ! $isWorking;
+    $isOnLeave = $currentSession === null && $todayLeave !== null;
+@endphp
+
 <section class="attendance-console" aria-labelledby="attendance-status-heading">
     <div class="attendance-console-header">
         <div>
             <p class="eyebrow mb-1">Current attendance</p>
-            @if ($currentSession?->time_out_at === null && $currentSession !== null)
+            @if ($isWorking)
                 <h2 id="attendance-status-heading">Currently working</h2>
                 <p>Your attendance session is open.</p>
-            @elseif ($currentSession !== null)
+            @elseif ($isCompleted)
                 <h2 id="attendance-status-heading">Completed for today</h2>
                 <p>Your attendance for this work date is complete.</p>
+            @elseif ($isOnLeave)
+                <h2 id="attendance-status-heading">On Leave</h2>
+                <p>You recorded today as leave.</p>
             @else
                 <h2 id="attendance-status-heading">Not clocked in</h2>
                 <p>Choose your work arrangement, then record Time In.</p>
             @endif
         </div>
-        <span class="status-indicator {{ $currentSession?->time_out_at === null && $currentSession !== null ? 'status-indicator-working' : ($currentSession !== null ? 'status-indicator-completed' : 'status-indicator-neutral') }}">
-            <i class="ti {{ $currentSession?->time_out_at === null && $currentSession !== null ? 'ti-clock-play' : ($currentSession !== null ? 'ti-circle-check' : 'ti-clock-off') }}" aria-hidden="true"></i>
-            {{ $currentSession?->time_out_at === null && $currentSession !== null ? 'Working' : ($currentSession !== null ? 'Completed' : 'Not Clocked In') }}
+        <span class="status-indicator {{ $isWorking ? 'status-indicator-working' : ($isCompleted ? 'status-indicator-completed' : ($isOnLeave ? 'status-indicator-leave' : 'status-indicator-neutral')) }}">
+            <i class="ti {{ $isWorking ? 'ti-clock-play' : ($isCompleted ? 'ti-circle-check' : ($isOnLeave ? 'ti-calendar-event' : 'ti-clock-off')) }}" aria-hidden="true"></i>
+            {{ $isWorking ? 'Working' : ($isCompleted ? 'Completed' : ($isOnLeave ? 'On Leave' : 'Not Clocked In')) }}
         </span>
     </div>
 
@@ -39,13 +48,21 @@
             <div class="alert alert-warning mb-0" role="status">
                 Your employment status does not permit attendance actions. Contact an administrator if this is unexpected.
             </div>
-        @elseif ($currentSession?->time_out_at === null && $currentSession !== null)
+        @elseif ($isWorking)
             <form method="POST" action="{{ route('employee.attendance.time-out') }}" data-submit-once>
                 @csrf
                 <button class="btn btn-workforce btn-lg attendance-action" type="submit" data-submitting-text="Recording Time Out…">
                     <i class="ti ti-clock-stop me-2" aria-hidden="true"></i>Time Out
                 </button>
             </form>
+        @elseif ($isOnLeave)
+            <div class="leave-today-notice" role="status">
+                <i class="ti ti-calendar-event" aria-hidden="true"></i>
+                <div>
+                    <strong>Today is recorded as leave.</strong>
+                    <p class="mb-0">Remove today’s leave record before recording Time In.</p>
+                </div>
+            </div>
         @elseif ($currentSession === null)
             <form method="POST" action="{{ route('employee.attendance.time-in') }}" data-submit-once>
                 @csrf
@@ -60,7 +77,7 @@
                                        autocomplete="off" required
                                        @if ($errors->has('work_arrangement')) aria-describedby="work-arrangement-error" @endif
                                        @checked(old('work_arrangement') === $workArrangement->value)>
-                                <label for="work-arrangement-{{ $workArrangement->value }}">
+                                <label class="justify-content-center" for="work-arrangement-{{ $workArrangement->value }}">
                                     <i class="ti {{ match ($workArrangement) { \App\Enums\WorkArrangement::WorkFromHome => 'ti-home', \App\Enums\WorkArrangement::OfficeBased => 'ti-building', \App\Enums\WorkArrangement::FieldBased => 'ti-map-pin' } }}" aria-hidden="true"></i>
                                     <span>{{ $workArrangement->label() }}</span>
                                 </label>
