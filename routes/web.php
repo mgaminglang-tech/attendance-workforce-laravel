@@ -4,6 +4,7 @@ use App\Enums\UserRole;
 use App\Http\Controllers\Admin\AttendanceController as AdminAttendanceController;
 use App\Http\Controllers\Admin\AttendanceCorrectionController;
 use App\Http\Controllers\Admin\AttendanceReportController as AdminAttendanceReportController;
+use App\Http\Controllers\Admin\DashboardController as AdminDashboardController;
 use App\Http\Controllers\Admin\DepartmentController;
 use App\Http\Controllers\Admin\DepartmentDtrZipController as AdminDepartmentDtrZipController;
 use App\Http\Controllers\Admin\DepartmentHrAssignmentController;
@@ -12,9 +13,14 @@ use App\Http\Controllers\Admin\EmployeeAccountController;
 use App\Http\Controllers\Admin\EmployeeController;
 use App\Http\Controllers\Admin\EmployeeInvitationController;
 use App\Http\Controllers\Auth\AuthenticatedSessionController;
+use App\Http\Controllers\Auth\NewPasswordController;
+use App\Http\Controllers\Auth\PasswordResetLinkController;
 use App\Http\Controllers\Employee\AttendanceController;
 use App\Http\Controllers\Employee\AttendanceHistoryController;
+use App\Http\Controllers\Employee\DashboardController as EmployeeDashboardController;
 use App\Http\Controllers\Employee\DtrController as EmployeeDtrController;
+use App\Http\Controllers\Employee\RecordLeaveController;
+use App\Http\Controllers\Employee\RemoveLeaveController;
 use App\Http\Controllers\Employee\TimeInController;
 use App\Http\Controllers\Employee\TimeOutController;
 use App\Http\Controllers\Hr\AttendanceReportController as HrAttendanceReportController;
@@ -35,6 +41,16 @@ Route::get('/', function () {
 Route::middleware('guest')->group(function () {
     Route::get('/login', [AuthenticatedSessionController::class, 'create'])->name('login');
     Route::post('/login', [AuthenticatedSessionController::class, 'store'])->name('login.store');
+    Route::get('/forgot-password', [PasswordResetLinkController::class, 'create'])
+        ->name('password.request');
+    Route::post('/forgot-password', [PasswordResetLinkController::class, 'store'])
+        ->middleware('throttle:password-recovery')
+        ->name('password.email');
+    Route::get('/reset-password/{token}', [NewPasswordController::class, 'create'])
+        ->name('password.reset');
+    Route::post('/reset-password', [NewPasswordController::class, 'store'])
+        ->middleware('throttle:password-reset')
+        ->name('password.update');
 });
 
 Route::post('/logout', [AuthenticatedSessionController::class, 'destroy'])
@@ -42,7 +58,7 @@ Route::post('/logout', [AuthenticatedSessionController::class, 'destroy'])
     ->name('logout');
 
 Route::middleware(['auth', 'account.active', 'role:'.UserRole::Admin->value])->group(function () {
-    Route::view('/admin/dashboard', 'admin.dashboard')->name('admin.dashboard');
+    Route::get('/admin/dashboard', AdminDashboardController::class)->name('admin.dashboard');
 
     Route::prefix('admin')->name('admin.')->middleware('can:manage-workforce')->group(function () {
         Route::resource('employees', EmployeeController::class)->except('destroy');
@@ -87,10 +103,12 @@ Route::middleware(['auth', 'account.active', 'role:'.UserRole::Admin->value])->g
 
 Route::middleware(['auth', 'account.active', 'role:'.UserRole::Employee->value])->group(function () {
     Route::prefix('employee')->name('employee.')->group(function () {
-        Route::view('/dashboard', 'employee.dashboard')->name('dashboard');
+        Route::get('/dashboard', EmployeeDashboardController::class)->name('dashboard');
         Route::get('/attendance', [AttendanceController::class, 'index'])->name('attendance.index');
         Route::post('/attendance/time-in', TimeInController::class)->name('attendance.time-in');
         Route::post('/attendance/time-out', TimeOutController::class)->name('attendance.time-out');
+        Route::post('/attendance/leave', RecordLeaveController::class)->name('attendance.leave.store');
+        Route::delete('/attendance/leave/{leaveDay}', RemoveLeaveController::class)->name('attendance.leave.destroy');
         Route::get('/attendance/history', AttendanceHistoryController::class)->name('attendance.history');
         Route::get('/dtr', [EmployeeDtrController::class, 'index'])->name('dtr.index');
         Route::get('/dtr/preview', [EmployeeDtrController::class, 'preview'])->name('dtr.preview');

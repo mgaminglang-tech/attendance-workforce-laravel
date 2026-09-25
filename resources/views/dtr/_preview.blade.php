@@ -1,4 +1,4 @@
-<section class="card border-0 shadow-sm mt-4" aria-labelledby="dtr-preview-heading">
+<section class="card surface-card mt-4" aria-labelledby="dtr-preview-heading">
     <div class="card-body p-3 p-md-4">
         <div class="d-flex flex-column flex-md-row justify-content-between gap-3 mb-4">
             <div>
@@ -12,14 +12,22 @@
                     · {{ $dtr['month_label'] }}
                 </p>
             </div>
-            <a class="btn btn-workforce align-self-md-start" href="{{ $pdfUrl }}">Download PDF</a>
+            <a class="btn btn-workforce dtr-download-button align-self-md-start" href="{{ $pdfUrl }}">
+                <i class="ti ti-download me-1" aria-hidden="true"></i>Download PDF
+            </a>
         </div>
 
         <p class="small text-body-secondary">
             Certification period: {{ $dtr['first_date_label'] }} to {{ $dtr['last_date_label'] }}
         </p>
 
-        <div class="table-responsive dtr-preview-table">
+        <p class="dtr-scroll-hint d-md-none" id="dtr-scroll-hint">
+            <i class="ti ti-arrows-horizontal" aria-hidden="true"></i>
+            Swipe horizontally to view all columns
+        </p>
+
+        <div class="table-responsive dtr-preview-table" tabindex="0" role="region"
+             aria-label="Monthly DTR table" aria-describedby="dtr-scroll-hint">
             <table class="table table-bordered table-sm align-middle mb-0">
                 <thead class="table-light">
                     <tr>
@@ -41,9 +49,9 @@
                             <td>{{ $row['total_hours'] }}</td>
                             <td>
                                 @if ($row['has_legacy_arrangement'])
-                                    <span class="text-body-secondary">Not recorded</span>
-                                @else
-                                    {{ $row['work_arrangement'] }}
+                                    <span class="badge arrangement-badge">Not recorded</span>
+                                @elseif ($row['work_arrangement'] !== null)
+                                    <span class="badge arrangement-badge">{{ $row['work_arrangement'] }}</span>
                                 @endif
                             </td>
                             <td>{{ $row['attendance_rendered'] }}</td>

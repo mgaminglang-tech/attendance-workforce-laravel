@@ -3,14 +3,14 @@
 @section('title', 'Attendance Management | '.config('app.name'))
 
 @section('content')
-    <div class="container py-4 py-md-5">
-        <div class="mb-4">
-            <span class="badge text-bg-secondary mb-2">Administration</span>
+    <div class="container-xxl page-shell">
+        <header class="page-header">
+            <span class="eyebrow">Administration</span>
             <h1 class="h2 mb-1">Attendance management</h1>
             <p class="text-body-secondary mb-0">Review workforce attendance and open individual records for controlled corrections.</p>
-        </div>
+        </header>
 
-        <div class="card border-0 shadow-sm mb-4">
+        <div class="card filter-panel mb-4">
             <div class="card-body p-4">
                 <form method="GET" action="{{ route('admin.attendance.index') }}">
                     <div class="row g-3 align-items-end">
@@ -55,7 +55,7 @@
             </div>
         </div>
 
-        <div class="card border-0 shadow-sm">
+        <div class="card surface-card">
             <div class="table-responsive">
                 <table class="table table-hover align-middle mb-0">
                     <thead class="table-light">
@@ -81,10 +81,10 @@
                                 <td>{{ $attendanceSession->work_date->format('M j, Y') }}</td>
                                 <td>{{ $attendanceSession->time_in_at->format('M j, Y g:i:s A') }}</td>
                                 <td>{{ $attendanceSession->time_out_at?->format('M j, Y g:i:s A') ?? 'Still working' }}</td>
-                                <td>{{ $attendanceSession->work_arrangement?->label() ?? 'Not recorded' }}</td>
+                                <td><span class="badge arrangement-badge">{{ $attendanceSession->work_arrangement?->label() ?? 'Not recorded' }}</span></td>
                                 <td>
-                                    <span class="badge text-bg-{{ $attendanceSession->time_out_at === null ? 'success' : 'secondary' }} status-badge">
-                                        {{ $attendanceSession->time_out_at === null ? 'Open' : 'Completed' }}
+                                    <span class="badge status-badge {{ $attendanceSession->time_out_at === null ? 'status-badge-working' : 'status-badge-completed' }}">
+                                        {{ $attendanceSession->time_out_at === null ? 'Working' : 'Completed' }}
                                     </span>
                                 </td>
                                 <td class="text-end table-actions">
@@ -93,7 +93,7 @@
                             </tr>
                         @empty
                             <tr>
-                                <td class="text-center text-body-secondary py-5" colspan="8">No attendance records match these filters.</td>
+                                <td class="empty-state" colspan="8">No attendance records match the selected filters.</td>
                             </tr>
                         @endforelse
                     </tbody>

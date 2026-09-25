@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Models\AttendanceSession;
 use App\Models\Employee;
+use App\Models\EmployeeLeaveDay;
 use Carbon\CarbonImmutable;
 
 class BuildMonthlyDtr
@@ -34,6 +35,7 @@ class BuildMonthlyDtr
      *         attendance_rendered: string,
      *         remarks: string,
      *         has_attendance: bool,
+     *         has_leave: bool,
      *         has_legacy_arrangement: bool
      *     }>
      * }
@@ -63,12 +65,20 @@ class BuildMonthlyDtr
             ->orderBy('work_date')
             ->get()
             ->keyBy(fn (AttendanceSession $session): string => $session->work_date->toDateString());
+        $leaveDays = EmployeeLeaveDay::query()
+            ->select(['id', 'employee_id', 'leave_date'])
+            ->whereBelongsTo($employee)
+            ->whereBetween('leave_date', [$firstDate->toDateString(), $lastDate->toDateString()])
+            ->orderBy('leave_date')
+            ->get()
+            ->keyBy(fn (EmployeeLeaveDay $leaveDay): string => $leaveDay->leave_date->toDateString());
 
         $rows = [];
 
         for ($date = $firstDate; $date->lessThanOrEqualTo($lastDate); $date = $date->addDay()) {
             /** @var AttendanceSession|null $session */
             $session = $sessions->get($date->toDateString());
+            $isOnLeave = $session === null && $leaveDays->has($date->toDateString());
             $netMinutes = $session === null
                 ? null
                 : $this->calculateNetAttendanceMinutes->handle($session);
@@ -82,9 +92,10 @@ class BuildMonthlyDtr
                     ? ''
                     : number_format($netMinutes / 60, 2, '.', ''),
                 'work_arrangement' => $session?->work_arrangement?->label(),
-                'attendance_rendered' => $session?->work_arrangement?->dtrLabel() ?? '',
+                'attendance_rendered' => $isOnLeave ? 'ON LEAVE' : ($session?->work_arrangement?->dtrLabel() ?? ''),
                 'remarks' => '',
                 'has_attendance' => $session !== null,
+                'has_leave' => $isOnLeave,
                 'has_legacy_arrangement' => $session !== null && $session->work_arrangement === null,
             ];
         }

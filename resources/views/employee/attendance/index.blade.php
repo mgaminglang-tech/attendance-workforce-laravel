@@ -3,102 +3,124 @@
 @section('title', 'Attendance | '.config('app.name'))
 
 @section('content')
-    <div class="container py-4 py-md-5">
-        <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3 mb-4">
+    <div class="container-xl page-shell attendance-page">
+        <header class="page-header">
             <div>
-                <span class="badge text-bg-secondary mb-2">Employee attendance</span>
+                <span class="eyebrow">Employee attendance</span>
                 <h1 class="h2 mb-1">Timekeeping</h1>
                 <p class="text-body-secondary mb-0">Your attendance is recorded using authoritative server time.</p>
             </div>
-            <a class="btn btn-outline-secondary" href="{{ route('employee.attendance.history') }}">View attendance history</a>
-        </div>
+        </header>
 
         @if ($errors->has('attendance'))
             <div class="alert alert-danger" role="alert">{{ $errors->first('attendance') }}</div>
         @endif
 
-        <div class="row g-4">
-            <div class="col-lg-5">
-                <div class="card border-0 shadow-sm h-100">
-                    <div class="card-body p-4">
-                        <p class="detail-label mb-2">Current time in Asia/Manila</p>
-                        <p class="attendance-clock mb-1" data-manila-clock>Loading current time…</p>
-                        <p class="small text-body-secondary mb-0">Display only. The server records every Time In and Time Out.</p>
+        @if ($errors->has('leave_remove'))
+            <div class="alert alert-danger" role="alert">{{ $errors->first('leave_remove') }}</div>
+        @endif
+
+        <div class="attendance-workspace">
+            <div class="attendance-primary-column">
+                @include('employee.attendance._status-panel')
+
+                <section class="leave-panel" aria-labelledby="leave-panel-heading">
+                    <div class="leave-panel-header">
+                        <div>
+                            <p class="eyebrow mb-1">Leave</p>
+                            <h2 class="h4 mb-1" id="leave-panel-heading">Record time away</h2>
+                            <p class="text-body-secondary mb-0">Add one day or an inclusive date range.</p>
+                        </div>
+                        <button class="btn btn-outline-secondary leave-open-button" type="button"
+                                data-bs-toggle="modal" data-bs-target="#record-leave-modal">
+                            <i class="ti ti-calendar-plus me-2" aria-hidden="true"></i>Record Leave
+                        </button>
                     </div>
-                </div>
+
+                    @if ($upcomingLeaveDays->isNotEmpty())
+                        <div class="leave-upcoming" aria-labelledby="upcoming-leave-heading">
+                            <h3 id="upcoming-leave-heading">Current and upcoming leave</h3>
+                            <div class="leave-day-list">
+                                @foreach ($upcomingLeaveDays as $leaveDay)
+                                    <div class="leave-day-row">
+                                        <div>
+                                            <strong>{{ $leaveDay->leave_date->isToday() ? 'Today' : $leaveDay->leave_date->format('D, M j') }}</strong>
+                                            <span>{{ $leaveDay->leave_date->format('Y') }}</span>
+                                        </div>
+                                        <form method="POST" action="{{ route('employee.attendance.leave.destroy', $leaveDay) }}"
+                                              data-submit-once data-confirm-message="Remove this leave record?">
+                                            @csrf
+                                            @method('DELETE')
+                                            <button class="btn btn-sm btn-outline-secondary" type="submit" data-submitting-text="Removing…">
+                                                Remove<span class="visually-hidden"> leave for {{ $leaveDay->leave_date->format('F j, Y') }}</span>
+                                            </button>
+                                        </form>
+                                    </div>
+                                @endforeach
+                            </div>
+                        </div>
+                    @endif
+                </section>
             </div>
 
-            <div class="col-lg-7">
-                <div class="card border-0 shadow-sm h-100">
-                    <div class="card-body p-4">
-                        <div class="d-flex justify-content-between align-items-start gap-3 mb-4">
-                            <div>
-                                <p class="detail-label mb-1">Attendance status</p>
-                                @if ($currentSession?->time_out_at === null && $currentSession !== null)
-                                    <h2 class="h4 mb-0">Currently working</h2>
-                                @elseif ($currentSession !== null)
-                                    <h2 class="h4 mb-0">Completed for today</h2>
-                                @else
-                                    <h2 class="h4 mb-0">Not timed in</h2>
-                                @endif
-                            </div>
-                            <span class="badge text-bg-{{ $currentSession?->time_out_at === null && $currentSession !== null ? 'success' : 'secondary' }} status-badge">
-                                {{ $currentSession?->time_out_at === null && $currentSession !== null ? 'Open' : ($currentSession !== null ? 'Completed' : 'Ready') }}
-                            </span>
+            <div>
+                <section class="workforce-time-panel" aria-labelledby="server-time-heading">
+                    <p class="detail-label mb-2" id="server-time-heading">Current server time</p>
+                    <time class="attendance-clock" data-manila-clock-time>--:-- --</time>
+                    <p class="server-date" data-manila-clock-date>Loading date…</p>
+                    <p class="server-timezone">Asia/Manila</p>
+                    <p class="server-time-helper">Time In and Time Out use server-recorded timestamps.</p>
+                </section>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal fade" id="record-leave-modal" tabindex="-1" aria-labelledby="record-leave-modal-title" aria-hidden="true"
+         data-open-modal-on-load="{{ $errors->hasAny(['from_date', 'to_date', 'leave_record']) ? 'true' : 'false' }}">
+        <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable">
+            <div class="modal-content">
+                <form method="POST" action="{{ route('employee.attendance.leave.store') }}" data-submit-once>
+                    @csrf
+                    <div class="modal-header">
+                        <div>
+                            <p class="eyebrow mb-1">Employee leave</p>
+                            <h2 class="modal-title fs-5" id="record-leave-modal-title">Record leave dates</h2>
                         </div>
-
-                        @if ($currentSession !== null)
-                            <dl class="row mb-4">
-                                <dt class="col-sm-4 text-body-secondary">Work date</dt>
-                                <dd class="col-sm-8">{{ $currentSession->work_date->format('M j, Y') }}</dd>
-                                <dt class="col-sm-4 text-body-secondary">Time In</dt>
-                                <dd class="col-sm-8">{{ $currentSession->time_in_at->format('M j, Y g:i:s A') }}</dd>
-                                <dt class="col-sm-4 text-body-secondary">Time Out</dt>
-                                <dd class="col-sm-8 mb-0">{{ $currentSession->time_out_at?->format('M j, Y g:i:s A') ?? 'Still working' }}</dd>
-                                <dt class="col-sm-4 text-body-secondary">Work Arrangement</dt>
-                                <dd class="col-sm-8 mb-0">{{ $currentSession->work_arrangement?->label() ?? 'Not recorded' }}</dd>
-                            </dl>
-                        @else
-                            <p class="text-body-secondary">No attendance has been recorded for {{ $workDate }}.</p>
-                        @endif
-
-                        @if ($employee->employment_status !== \App\Enums\EmploymentStatus::Active)
-                            <div class="alert alert-warning mb-0" role="status">
-                                Your employment status does not permit attendance actions. Contact an administrator if this is unexpected.
-                            </div>
-                        @elseif ($currentSession?->time_out_at === null && $currentSession !== null)
-                            <form method="POST" action="{{ route('employee.attendance.time-out') }}" data-submit-once>
-                                @csrf
-                                <button class="btn btn-danger btn-lg" type="submit" data-submitting-text="Recording Time Out…">Time Out</button>
-                            </form>
-                        @elseif ($currentSession === null)
-                            <form method="POST" action="{{ route('employee.attendance.time-in') }}" data-submit-once>
-                                @csrf
-                                <fieldset class="mb-4">
-                                    <legend class="h6 mb-3">Work arrangement</legend>
-                                    <div class="row g-2">
-                                        @foreach ($workArrangements as $workArrangement)
-                                            <div class="col-12 col-sm-4 work-arrangement-option">
-                                                <input class="btn-check" id="work-arrangement-{{ $workArrangement->value }}"
-                                                       name="work_arrangement" type="radio" value="{{ $workArrangement->value }}"
-                                                       autocomplete="off" required @checked(old('work_arrangement') === $workArrangement->value)>
-                                                <label class="btn btn-outline-primary w-100" for="work-arrangement-{{ $workArrangement->value }}">
-                                                    {{ $workArrangement->label() }}
-                                                </label>
-                                            </div>
-                                        @endforeach
-                                    </div>
-                                    @error('work_arrangement')
-                                        <p class="text-danger small mt-2 mb-0">{{ $message }}</p>
-                                    @enderror
-                                </fieldset>
-                                <button class="btn btn-workforce btn-lg w-100" type="submit" data-submitting-text="Recording Time In…">Time In</button>
-                            </form>
-                        @else
-                            <p class="text-success fw-semibold mb-0">Your attendance for this work date is complete.</p>
-                        @endif
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                     </div>
-                </div>
+                    <div class="modal-body">
+                        <p class="text-body-secondary">Every calendar date in the range will be recorded, including weekends and holidays.</p>
+
+                        @error('leave_record')
+                            <div class="alert alert-danger" role="alert">{{ $message }}</div>
+                        @enderror
+
+                        <div class="row g-3">
+                            <div class="col-12 col-sm-6">
+                                <label class="form-label" for="leave-from-date">First day</label>
+                                <input class="form-control @error('from_date') is-invalid @enderror" id="leave-from-date"
+                                       name="from_date" type="date" value="{{ old('from_date', $workDate) }}" required
+                                       @error('from_date') aria-describedby="leave-from-date-error" @enderror>
+                                @error('from_date')
+                                    <div class="invalid-feedback" id="leave-from-date-error">{{ $message }}</div>
+                                @enderror
+                            </div>
+                            <div class="col-12 col-sm-6">
+                                <label class="form-label" for="leave-to-date">Last day</label>
+                                <input class="form-control @error('to_date') is-invalid @enderror" id="leave-to-date"
+                                       name="to_date" type="date" value="{{ old('to_date', old('from_date', $workDate)) }}" required
+                                       @error('to_date') aria-describedby="leave-to-date-error" @enderror>
+                                @error('to_date')
+                                    <div class="invalid-feedback" id="leave-to-date-error">{{ $message }}</div>
+                                @enderror
+                            </div>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+                        <button type="submit" class="btn btn-workforce" data-submitting-text="Recording Leave…">Record Leave</button>
+                    </div>
+                </form>
             </div>
         </div>
     </div>

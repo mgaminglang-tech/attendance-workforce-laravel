@@ -32,6 +32,11 @@ class AttendanceActionException extends Exception implements ShouldntReport
         return new self('Your attendance for today has already been completed.');
     }
 
+    public static function todayIsLeave(): self
+    {
+        return new self('You recorded today as leave.');
+    }
+
     public static function noOpenSession(): self
     {
         return new self('No active attendance session was found.');

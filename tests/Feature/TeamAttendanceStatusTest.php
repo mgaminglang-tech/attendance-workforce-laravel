@@ -5,7 +5,9 @@ namespace Tests\Feature;
 use App\Enums\WorkArrangement;
 use App\Models\AttendanceSession;
 use App\Models\Department;
+use App\Models\DepartmentHrAssignment;
 use App\Models\Employee;
+use App\Models\EmployeeLeaveDay;
 use App\Models\User;
 use App\Services\TeamAttendanceService;
 use Carbon\CarbonImmutable;
@@ -36,18 +38,16 @@ class TeamAttendanceStatusTest extends TestCase
         ]);
 
         $result = app(TeamAttendanceService::class)->forDepartment($department);
-        $members = collect($result['members'])->keyBy('employee_name');
+        $activity = collect($result['activity']);
 
-        $this->assertSame(['total' => 3, 'working' => 1, 'completed' => 1, 'not_clocked_in' => 1], $result['summary']);
-        $this->assertSame('Working', $members['Working Employee']['status']);
-        $this->assertSame('Work From Home', $members['Working Employee']['work_arrangement']);
-        $this->assertSame('Sep 23, 2026', $members['Working Employee']['work_date']);
-        $this->assertNull($members['Working Employee']['time_out']);
-        $this->assertSame('Completed', $members['Completed Employee']['status']);
-        $this->assertSame('Field-Based', $members['Completed Employee']['work_arrangement']);
-        $this->assertSame('Not clocked in', $members['Not Clocked In Employee']['status']);
-        $this->assertNull($members['Not Clocked In Employee']['work_arrangement']);
-        $this->assertNull($members['Not Clocked In Employee']['time_in']);
+        $this->assertSame(['total' => 3, 'working' => 1, 'completed' => 1, 'on_leave' => 0, 'not_clocked_in' => 1], $result['summary']);
+        $this->assertSame('Timed in', $activity->firstWhere('employee_name', 'Working Employee')['event']);
+        $this->assertSame('Work From Home', $activity->firstWhere('employee_name', 'Working Employee')['work_arrangement']);
+        $this->assertSame('Timed out', $activity->firstWhere('employee_name', 'Completed Employee')['event']);
+        $this->assertSame('Field-Based', $activity->firstWhere('employee_name', 'Completed Employee')['work_arrangement']);
+        $this->assertSame('Not Clocked In', $activity->firstWhere('employee_name', 'Not Clocked In Employee')['event']);
+        $this->assertNull($activity->firstWhere('employee_name', 'Not Clocked In Employee')['work_arrangement']);
+        $this->assertNull($activity->firstWhere('employee_name', 'Not Clocked In Employee')['event_time']);
         $this->assertModelExists($notClockedIn);
     }
 
@@ -63,8 +63,39 @@ class TeamAttendanceStatusTest extends TestCase
 
         $result = app(TeamAttendanceService::class)->forDepartment($department);
 
-        $this->assertSame('Working', $result['members'][0]['status']);
-        $this->assertSame('Not recorded', $result['members'][0]['work_arrangement']);
+        $this->assertSame('Not recorded', $result['activity'][0]['work_arrangement']);
+    }
+
+    public function test_activity_feed_excludes_the_assigned_hr_representative_and_keeps_department_counts(): void
+    {
+        $this->travelTo(CarbonImmutable::parse('2026-09-24 18:00:00', 'Asia/Manila'));
+        $department = Department::factory()->create();
+        $hrEmployee = $this->employee($department, 'Mervin Gaa');
+        $regularEmployee = $this->employee($department, 'Juan Dela Cruz');
+        DepartmentHrAssignment::factory()->for($department)->for($hrEmployee->user)->create();
+        $hrAttendanceSession = AttendanceSession::factory()->for($hrEmployee)->create([
+            'work_date' => '2026-09-24',
+            'time_in_at' => '2026-09-24 08:00:00',
+            'time_out_at' => '2026-09-24 16:56:00',
+            'work_arrangement' => WorkArrangement::OfficeBased,
+        ]);
+        AttendanceSession::factory()->for($regularEmployee)->open()->create([
+            'work_date' => '2026-09-24',
+            'time_in_at' => '2026-09-24 09:15:00',
+            'work_arrangement' => WorkArrangement::WorkFromHome,
+        ]);
+
+        $result = app(TeamAttendanceService::class)->forDepartment($department);
+        $activity = collect($result['activity']);
+        $hrEvents = $activity->where('employee_name', 'Mervin Gaa');
+        $regularEvents = $activity->where('employee_name', 'Juan Dela Cruz');
+
+        $this->assertSame(['total' => 2, 'working' => 1, 'completed' => 1, 'on_leave' => 0, 'not_clocked_in' => 0], $result['summary']);
+        $this->assertCount(0, $hrEvents);
+        $this->assertSame('JD', $regularEvents->first()['employee_initials']);
+        $this->assertTrue($regularEvents->every(fn (array $event): bool => ! $event['is_hr_representative']));
+        $this->assertSame('Today', $activity->first()['date_label']);
+        $this->assertModelExists($hrAttendanceSession);
     }
 
     public function test_other_department_and_disabled_employee_attendance_does_not_leak_or_break_workspace(): void
@@ -83,10 +114,50 @@ class TeamAttendanceStatusTest extends TestCase
         $result = app(TeamAttendanceService::class)->forDepartment($finance);
 
         $this->assertSame(1, $result['summary']['total']);
-        $this->assertSame('Finance Employee', $result['members'][0]['employee_name']);
-        $this->assertSame('Completed', $result['members'][0]['status']);
-        $this->assertNotContains('IT Private Employee', array_column($result['members'], 'employee_name'));
-        $this->assertNotContains('Former Finance Employee', array_column($result['members'], 'employee_name'));
+        $this->assertSame('Finance Employee', $result['activity'][0]['employee_name']);
+        $this->assertSame('Timed out', $result['activity'][0]['event']);
+        $this->assertNotContains('IT Private Employee', array_column($result['activity'], 'employee_name'));
+        $this->assertNotContains('Former Finance Employee', array_column($result['activity'], 'employee_name'));
+    }
+
+    public function test_today_leave_is_mutually_exclusive_and_attendance_takes_precedence(): void
+    {
+        $this->travelTo(CarbonImmutable::parse('2026-09-24 10:00:00', 'Asia/Manila'));
+        $department = Department::factory()->create();
+        $onLeave = $this->employee($department, 'Leave Employee');
+        $legacyConflict = $this->employee($department, 'Attendance Wins');
+        EmployeeLeaveDay::factory()->for($onLeave)->create(['leave_date' => '2026-09-24']);
+        EmployeeLeaveDay::factory()->for($legacyConflict)->create(['leave_date' => '2026-09-24']);
+        AttendanceSession::factory()->for($legacyConflict)->open()->create([
+            'work_date' => '2026-09-24',
+            'time_in_at' => '2026-09-24 08:00:00',
+        ]);
+
+        $result = app(TeamAttendanceService::class)->forDepartment($department);
+        $activity = collect($result['activity']);
+
+        $this->assertSame(['total' => 2, 'working' => 1, 'completed' => 0, 'on_leave' => 1, 'not_clocked_in' => 0], $result['summary']);
+        $this->assertSame('On Leave', $activity->firstWhere('employee_name', 'Leave Employee')['event']);
+        $this->assertNull($activity->firstWhere('employee_name', 'Leave Employee')['event_time']);
+        $this->assertNull($activity->firstWhere('employee_name', 'Leave Employee')['work_arrangement']);
+        $this->assertSame('Timed in', $activity->firstWhere('employee_name', 'Attendance Wins')['event']);
+    }
+
+    public function test_assigned_hr_representative_on_leave_is_counted_but_hidden_from_the_thread(): void
+    {
+        $this->travelTo(CarbonImmutable::parse('2026-09-24 10:00:00', 'Asia/Manila'));
+        $department = Department::factory()->create();
+        $hrEmployee = $this->employee($department, 'Hidden HR');
+        $regularEmployee = $this->employee($department, 'Visible Employee');
+        DepartmentHrAssignment::factory()->for($department)->for($hrEmployee->user)->create();
+        EmployeeLeaveDay::factory()->for($hrEmployee)->create(['leave_date' => '2026-09-24']);
+        EmployeeLeaveDay::factory()->for($regularEmployee)->create(['leave_date' => '2026-09-24']);
+
+        $result = app(TeamAttendanceService::class)->forDepartment($department);
+
+        $this->assertSame(['total' => 2, 'working' => 0, 'completed' => 0, 'on_leave' => 2, 'not_clocked_in' => 0], $result['summary']);
+        $this->assertNotContains('Hidden HR', array_column($result['activity'], 'employee_name'));
+        $this->assertContains('Visible Employee', array_column($result['activity'], 'employee_name'));
     }
 
     private function employee(Department $department, string $name): Employee

@@ -7,6 +7,7 @@ use App\Models\AttendanceSession;
 use App\Models\Department;
 use App\Models\DepartmentHrAssignment;
 use App\Models\Employee;
+use App\Models\EmployeeLeaveDay;
 use App\Models\User;
 use Carbon\CarbonImmutable;
 use Illuminate\Foundation\Testing\LazilyRefreshDatabase;
@@ -44,6 +45,28 @@ class AttendanceReportTest extends TestCase
             ->assertSee('Finance Employee');
     }
 
+    public function test_bulk_department_dtr_download_is_presented_once_in_an_accessible_modal(): void
+    {
+        $this->travelTo(CarbonImmutable::parse('2026-09-24 10:00:00', 'Asia/Manila'));
+        $admin = User::factory()->admin()->create();
+        $department = Department::factory()->create(['name' => 'Finance']);
+
+        $response = $this->actingAs($admin)->get(route('admin.reports.attendance.index'));
+
+        $response->assertOk()
+            ->assertSee('data-bs-target="#bulk-dtr-modal"', false)
+            ->assertSee('aria-labelledby="bulk-dtr-heading"', false)
+            ->assertSee('data-bs-dismiss="modal"', false)
+            ->assertSee('action="'.route('admin.reports.dtr.bulk').'"', false)
+            ->assertSee('name="department"', false)
+            ->assertSee('type="month"', false)
+            ->assertSee('value="2026-09"', false)
+            ->assertSee('September 2026')
+            ->assertSee($department->name);
+
+        $this->assertSame(1, substr_count($response->getContent(), route('admin.reports.dtr.bulk')));
+    }
+
     public function test_report_filters_and_summaries_use_net_hours_and_open_state(): void
     {
         $admin = User::factory()->admin()->create();
@@ -53,7 +76,7 @@ class AttendanceReportTest extends TestCase
         AttendanceSession::factory()->for($completedEmployee)->create([
             'work_date' => '2026-09-12',
             'time_in_at' => $this->manila('2026-09-12 08:00:00'),
-            'time_out_at' => $this->manila('2026-09-12 17:00:00'),
+            'time_out_at' => $this->manila('2026-09-12 13:22:00'),
             'work_arrangement' => WorkArrangement::WorkFromHome,
         ]);
         AttendanceSession::factory()->for($openEmployee)->open()->create([
@@ -76,7 +99,7 @@ class AttendanceReportTest extends TestCase
                 $row = $sessions->first();
 
                 return $sessions->total() === 1
-                    && $row['net_hours'] === '8.00'
+                    && $row['net_hours'] === '5.37'
                     && $row['work_arrangement'] === 'Work From Home'
                     && $row['status'] === 'Completed';
             })
@@ -85,7 +108,8 @@ class AttendanceReportTest extends TestCase
                 'unique_employees' => 1,
                 'completed' => 1,
                 'open' => 0,
-                'total_net_hours' => '8.00',
+                'on_leave' => 0,
+                'total_net_hours' => '5.37',
             ]);
 
         $this->actingAs($admin)->get(route('admin.reports.attendance.index', [
@@ -138,6 +162,50 @@ class AttendanceReportTest extends TestCase
         });
     }
 
+    public function test_report_includes_and_filters_leave_without_fabricating_attendance_values(): void
+    {
+        $admin = User::factory()->admin()->create();
+        $department = Department::factory()->create();
+        $leaveEmployee = $this->employeeIn($department, 'Leave Employee', 'EMP-LEAVE');
+        $attendanceEmployee = $this->employeeIn($department, 'Attendance Employee', 'EMP-WORK');
+        EmployeeLeaveDay::factory()->for($leaveEmployee)->create(['leave_date' => '2026-09-12']);
+        AttendanceSession::factory()->for($attendanceEmployee)->create(['work_date' => '2026-09-12']);
+
+        $response = $this->actingAs($admin)->get(route('admin.reports.attendance.index', [
+            'date_from' => '2026-09-01',
+            'date_to' => '2026-09-30',
+            'state' => 'on_leave',
+        ]))->assertOk()
+            ->assertSee('Leave Employee');
+
+        $response->assertViewHas('sessions', function ($sessions): bool {
+            $row = $sessions->first();
+
+            return $sessions->total() === 1
+                && $row['status'] === 'On Leave'
+                && $row['time_in'] === ''
+                && $row['time_out'] === ''
+                && $row['net_hours'] === ''
+                && $row['work_arrangement'] === null;
+        })->assertViewHas('summary', fn (array $summary): bool => $summary === [
+            'records' => 1,
+            'unique_employees' => 1,
+            'completed' => 0,
+            'open' => 0,
+            'on_leave' => 1,
+            'total_net_hours' => '0.00',
+        ]);
+
+        $this->actingAs($admin)->get(route('admin.reports.attendance.index', [
+            'date_from' => '2026-09-01',
+            'date_to' => '2026-09-30',
+            'work_arrangement' => WorkArrangement::OfficeBased->value,
+        ]))->assertOk()->assertViewHas(
+            'sessions',
+            fn ($sessions): bool => ! $sessions->contains(fn (array $row): bool => $row['status'] === 'On Leave'),
+        );
+    }
+
     public function test_report_rejects_invalid_ranges_and_preserves_filters_while_paginating(): void
     {
         $admin = User::factory()->admin()->create();
@@ -181,14 +249,20 @@ class AttendanceReportTest extends TestCase
         $itEmployee = $this->employeeIn($it, 'IT Employee', 'IT-001');
         AttendanceSession::factory()->for($financeEmployee)->create(['work_date' => '2026-09-10']);
         AttendanceSession::factory()->for($itEmployee)->create(['work_date' => '2026-09-10']);
+        EmployeeLeaveDay::factory()->for($financeEmployee)->create(['leave_date' => '2026-09-11']);
+        EmployeeLeaveDay::factory()->for($itEmployee)->create(['leave_date' => '2026-09-11']);
 
         $this->actingAs($representative)->get(route('hr.reports.attendance.index', [
             'date_from' => '2026-09-01',
             'date_to' => '2026-09-30',
         ]))->assertOk()
             ->assertSee('Department:')
+            ->assertSee('type="month"', false)
+            ->assertSee('data-bs-target="#bulk-dtr-modal"', false)
+            ->assertSee('Fixed to your assigned department.')
             ->assertSee('Finance Employee')
             ->assertDontSee('IT Employee')
+            ->assertSee('On Leave')
             ->assertViewHas('employees', fn ($employees): bool => $employees->modelKeys() === [$financeEmployee->id]);
 
         $this->actingAs($representative)->get(route('hr.reports.attendance.index', [

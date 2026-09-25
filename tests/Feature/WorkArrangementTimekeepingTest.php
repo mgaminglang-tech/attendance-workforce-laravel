@@ -145,6 +145,9 @@ class WorkArrangementTimekeepingTest extends TestCase
 
         $this->actingAs($user)->get(route('employee.attendance.index'))
             ->assertOk()
+            ->assertSee('Current server time')
+            ->assertSee('data-manila-clock-time', false)
+            ->assertSee('data-manila-clock-date', false)
             ->assertSee('name="work_arrangement"', false)
             ->assertSee('col-12 col-sm-4 work-arrangement-option', false)
             ->assertSee('Work From Home')
@@ -158,6 +161,8 @@ class WorkArrangementTimekeepingTest extends TestCase
         $this->actingAs($user)->get(route('employee.attendance.index'))
             ->assertOk()
             ->assertSee('Office-Based')
+            ->assertSee('btn btn-workforce btn-lg attendance-action', false)
+            ->assertDontSee('btn btn-danger btn-lg attendance-action', false)
             ->assertDontSee('name="work_arrangement"', false);
     }
 

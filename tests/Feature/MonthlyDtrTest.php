@@ -5,6 +5,7 @@ namespace Tests\Feature;
 use App\Enums\WorkArrangement;
 use App\Models\AttendanceSession;
 use App\Models\Employee;
+use App\Models\EmployeeLeaveDay;
 use App\Models\User;
 use App\Services\BuildMonthlyDtr;
 use Carbon\CarbonImmutable;
@@ -33,7 +34,7 @@ class MonthlyDtrTest extends TestCase
     }
 
     #[DataProvider('completedSessionDurations')]
-    public function test_completed_attendance_deducts_the_fixed_break(
+    public function test_completed_attendance_applies_the_break_only_at_six_hours_or_more(
         string $timeIn,
         string $timeOut,
         string $expectedTotalHours,
@@ -93,13 +94,13 @@ class MonthlyDtrTest extends TestCase
         $this->assertSame('', $missingRow['attendance_rendered']);
     }
 
-    public function test_duration_shorter_than_the_fixed_break_is_zero(): void
+    public function test_negative_duration_never_produces_negative_net_hours(): void
     {
         $employee = Employee::factory()->create();
         AttendanceSession::factory()->for($employee)->create([
             'work_date' => '2026-09-15',
-            'time_in_at' => '2026-09-15 08:00:00',
-            'time_out_at' => '2026-09-15 08:45:00',
+            'time_in_at' => '2026-09-15 09:00:00',
+            'time_out_at' => '2026-09-15 08:59:00',
         ]);
 
         $row = $this->build($employee, '2026-09')['rows'][14];
@@ -181,6 +182,39 @@ class MonthlyDtrTest extends TestCase
         $this->assertSame('', $row['attendance_rendered']);
     }
 
+    public function test_leave_renders_on_the_calendar_date_without_times_hours_or_arrangement(): void
+    {
+        $employee = Employee::factory()->create();
+        EmployeeLeaveDay::factory()->for($employee)->create(['leave_date' => '2026-09-12']);
+
+        $row = $this->build($employee, '2026-09')['rows'][11];
+
+        $this->assertTrue($row['has_leave']);
+        $this->assertFalse($row['has_attendance']);
+        $this->assertSame('ON LEAVE', $row['attendance_rendered']);
+        $this->assertSame('', $row['time_in']);
+        $this->assertSame('', $row['time_out']);
+        $this->assertSame('', $row['total_hours']);
+        $this->assertNull($row['work_arrangement']);
+        $this->assertSame('', $row['remarks']);
+    }
+
+    public function test_attendance_takes_precedence_over_a_legacy_conflicting_leave_row(): void
+    {
+        $employee = Employee::factory()->create();
+        EmployeeLeaveDay::factory()->for($employee)->create(['leave_date' => '2026-09-12']);
+        AttendanceSession::factory()->for($employee)->create([
+            'work_date' => '2026-09-12',
+            'work_arrangement' => WorkArrangement::OfficeBased,
+        ]);
+
+        $row = $this->build($employee, '2026-09')['rows'][11];
+
+        $this->assertTrue($row['has_attendance']);
+        $this->assertFalse($row['has_leave']);
+        $this->assertSame('OFFICE-BASED', $row['attendance_rendered']);
+    }
+
     public static function calendarMonths(): array
     {
         return [
@@ -194,8 +228,12 @@ class MonthlyDtrTest extends TestCase
     public static function completedSessionDurations(): array
     {
         return [
+            'five hours and twenty-two minutes' => ['2026-09-15 08:00:00', '2026-09-15 13:22:00', '5.37'],
+            'five hours and fifty-nine minutes' => ['2026-09-15 08:00:00', '2026-09-15 13:59:00', '5.98'],
+            'exactly six hours' => ['2026-09-15 08:00:00', '2026-09-15 14:00:00', '5.00'],
+            'six hours and one minute' => ['2026-09-15 08:00:00', '2026-09-15 14:01:00', '5.02'],
+            'eight-hour daytime shift' => ['2026-09-15 08:00:00', '2026-09-15 16:00:00', '7.00'],
             'nine-hour daytime shift' => ['2026-09-15 08:00:00', '2026-09-15 17:00:00', '8.00'],
-            'eight-and-a-half-hour daytime shift' => ['2026-09-15 08:00:00', '2026-09-15 16:30:00', '7.50'],
             'nine-hour overnight shift' => ['2026-09-15 22:00:00', '2026-09-16 07:00:00', '8.00'],
         ];
     }

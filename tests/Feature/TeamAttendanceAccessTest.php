@@ -3,10 +3,12 @@
 namespace Tests\Feature;
 
 use App\Enums\WorkArrangement;
+use App\Models\AttendanceSession;
 use App\Models\Department;
 use App\Models\DepartmentHrAssignment;
 use App\Models\Employee;
 use App\Models\User;
+use Carbon\CarbonImmutable;
 use Illuminate\Foundation\Testing\LazilyRefreshDatabase;
 use Illuminate\Support\Facades\Gate;
 use Tests\TestCase;
@@ -25,8 +27,8 @@ class TeamAttendanceAccessTest extends TestCase
         $this->actingAs($financeUser)
             ->get(route('team-attendance.index', ['department_id' => $it->id]))
             ->assertOk()
-            ->assertSee('Finance Team Attendance')
-            ->assertDontSee('IT Team Attendance');
+            ->assertSee('Finance Team')
+            ->assertDontSee('IT Team');
         $this->assertTrue(Gate::forUser($financeUser)->allows('viewTeamAttendance', $finance));
         $this->assertFalse(Gate::forUser($financeUser)->allows('viewTeamAttendance', $it));
         $this->assertTrue(Gate::forUser($itUser)->allows('viewTeamAttendance', $it));
@@ -59,7 +61,7 @@ class TeamAttendanceAccessTest extends TestCase
 
         $this->actingAs($representative)->get(route('hr.team-attendance.index'))
             ->assertOk()
-            ->assertSee('Finance Team Attendance')
+            ->assertSee('Finance Team')
             ->assertSee('HR Representative workspace');
         $this->assertTrue(Gate::forUser($representative)->allows('viewTeamAttendance', $humanResources));
         $this->assertTrue(Gate::forUser($representative)->allows('viewTeamAttendance', $finance));
@@ -91,9 +93,9 @@ class TeamAttendanceAccessTest extends TestCase
             ->assertSee('Finance')
             ->assertSee('IT');
         $this->actingAs($admin)->get(route('admin.departments.team-attendance.show', $finance))
-            ->assertOk()->assertSee('Finance Team Attendance');
+            ->assertOk()->assertSee('Finance Team');
         $this->actingAs($admin)->get(route('admin.departments.team-attendance.show', $it))
-            ->assertOk()->assertSee('IT Team Attendance');
+            ->assertOk()->assertSee('IT Team');
     }
 
     public function test_workspace_escapes_employee_names_and_omits_private_fields(): void
@@ -110,6 +112,64 @@ class TeamAttendanceAccessTest extends TestCase
             ->assertSee($dangerousName)
             ->assertDontSee($dangerousName, false)
             ->assertDontSee($privateEmail);
+    }
+
+    public function test_workspace_excludes_the_current_department_hr_representative_from_the_activity_feed(): void
+    {
+        $this->travelTo(CarbonImmutable::parse('2026-09-24 18:00:00', 'Asia/Manila'));
+        $department = Department::factory()->create(['name' => 'Finance']);
+        [$viewer] = $this->employeeIn($department);
+        [$representative, $hrEmployee] = $this->employeeIn($department);
+        [$regularUser, $regularEmployee] = $this->employeeIn($department);
+        DepartmentHrAssignment::factory()->for($department)->for($representative)->create();
+        $hrAttendanceSession = AttendanceSession::factory()->for($hrEmployee)->create([
+            'work_date' => '2026-09-24',
+            'time_in_at' => '2026-09-24 08:00:00',
+            'time_out_at' => '2026-09-24 16:56:00',
+        ]);
+        AttendanceSession::factory()->for($regularEmployee)->open()->create([
+            'work_date' => '2026-09-24',
+            'time_in_at' => '2026-09-24 09:15:00',
+        ]);
+
+        $response = $this->actingAs($viewer)->get(route('team-attendance.index'))
+            ->assertOk()
+            ->assertSee('Attendance thread')
+            ->assertDontSee('aria-label="HR Representative"', false)
+            ->assertDontSee($representative->name)
+            ->assertSee($regularUser->name)
+            ->assertDontSee('7.93 hrs worked')
+            ->assertSee('Not Clocked In')
+            ->assertDontSee('Team status');
+
+        $this->assertStringContainsString('<strong data-summary="total">3</strong> members', $response->getContent());
+        $this->assertStringContainsString('<strong data-summary="working">1</strong> working', $response->getContent());
+        $this->assertStringContainsString('<strong data-summary="completed">1</strong> completed', $response->getContent());
+        $this->assertStringContainsString('<strong data-summary="not_clocked_in">1</strong> not clocked in', $response->getContent());
+        $this->assertModelExists($hrAttendanceSession);
+        $response->assertDontSee('message input')->assertDontSee('Send message');
+    }
+
+    public function test_workspace_omits_net_hours_only_from_the_thread_presentation(): void
+    {
+        $this->travelTo(CarbonImmutable::parse('2026-09-24 18:00:00', 'Asia/Manila'));
+        $department = Department::factory()->create();
+        [$viewer] = $this->employeeIn($department);
+        [, $employee] = $this->employeeIn($department);
+        AttendanceSession::factory()->for($employee)->create([
+            'work_date' => '2026-09-24',
+            'time_in_at' => '2026-09-24 08:00:00',
+            'time_out_at' => '2026-09-24 16:00:00',
+            'work_arrangement' => WorkArrangement::WorkFromHome,
+        ]);
+
+        $response = $this->actingAs($viewer)->get(route('team-attendance.index'));
+
+        $response->assertOk()
+            ->assertSee('Timed out')
+            ->assertSee('Work From Home')
+            ->assertDontSee('7.00 hrs worked');
+        $this->assertStringContainsString('"net_hours":"7.00 hrs"', $response->getContent());
     }
 
     /** @return array{User, Employee} */

@@ -3,9 +3,9 @@
 @section('title', 'Edit Department | '.config('app.name'))
 
 @section('content')
-    <div class="container py-5">
-        <h1 class="h2 mb-4">Edit Department</h1>
-        <div class="card border-0 shadow-sm mb-4">
+    <div class="container-xxl page-shell">
+        <header class="page-header"><h1 class="h2 mb-1">Edit Department</h1><p class="text-body-secondary mb-0">Manage department details and HR Representative access.</p></header>
+        <div class="card surface-card mb-4">
             <div class="card-body p-4">
                 <form method="POST" action="{{ route('admin.departments.update', $department) }}">
                     @csrf
@@ -15,7 +15,7 @@
             </div>
         </div>
 
-        <div class="card border-0 shadow-sm">
+        <div class="card surface-card department-workspace-card">
             <div class="card-body p-4">
                 <div class="d-flex flex-column flex-md-row justify-content-between gap-3 mb-3">
                     <div>

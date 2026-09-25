@@ -4,6 +4,7 @@ namespace Tests\Feature;
 
 use App\Models\AttendanceSession;
 use App\Models\Employee;
+use App\Models\EmployeeLeaveDay;
 use App\Models\User;
 use Carbon\CarbonImmutable;
 use Illuminate\Foundation\Testing\LazilyRefreshDatabase;
@@ -84,9 +85,13 @@ class AttendanceHistoryTest extends TestCase
         $this->actingAs($user)
             ->get(route('employee.attendance.history'))
             ->assertOk()
+            ->assertSee('data-attendance-mobile-record', false)
+            ->assertSee('data-attendance-history-table', false)
+            ->assertSee('Completed')
+            ->assertSee('Duration: 8h 15m')
             ->assertSee('8h 15m')
             ->assertSee('Still working')
-            ->assertSee('Open');
+            ->assertSee('Working');
 
         $this->assertFalse(AttendanceSession::query()->firstOrFail()->isFillable('total_hours'));
     }
@@ -107,12 +112,36 @@ class AttendanceHistoryTest extends TestCase
 
         $this->actingAs($user)
             ->get(route('employee.attendance.history'))
-            ->assertViewHas('attendanceSessions', function ($attendanceSessions): bool {
-                return $attendanceSessions->total() === 16
-                    && $attendanceSessions->perPage() === 15
-                    && $attendanceSessions->first()->work_date->toDateString() === '2026-09-23'
-                    && $attendanceSessions->last()->work_date->toDateString() === '2026-09-09';
+            ->assertViewHas('historyRecords', function ($historyRecords): bool {
+                return $historyRecords->total() === 16
+                    && $historyRecords->perPage() === 15
+                    && $historyRecords->first()['date']->toDateString() === '2026-09-23'
+                    && $historyRecords->last()['date']->toDateString() === '2026-09-09';
             });
+    }
+
+    public function test_history_includes_only_own_leave_without_fabricated_times_or_duration(): void
+    {
+        [$user, $employee] = $this->activeEmployee();
+        EmployeeLeaveDay::factory()->for($employee)->create(['leave_date' => '2026-09-22']);
+        EmployeeLeaveDay::factory()->create(['leave_date' => '2026-09-23']);
+
+        $response = $this->actingAs($user)->get(route('employee.attendance.history'));
+
+        $response->assertOk()
+            ->assertSee('Sep 22, 2026')
+            ->assertSee('On Leave')
+            ->assertDontSee('Sep 23, 2026');
+        $response->assertViewHas('historyRecords', function ($historyRecords): bool {
+            $record = $historyRecords->first();
+
+            return $historyRecords->total() === 1
+                && $record['type'] === 'leave'
+                && $record['time_in_at'] === null
+                && $record['time_out_at'] === null
+                && $record['worked_minutes'] === null
+                && $record['work_arrangement'] === null;
+        });
     }
 
     /** @return array{User, Employee} */

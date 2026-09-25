@@ -3,47 +3,65 @@
 @section('title', 'Team Attendance | '.config('app.name'))
 
 @section('content')
-    <div class="container py-4 py-md-5" data-team-attendance data-status-url="{{ $statusUrl }}">
-        <div class="d-flex flex-column flex-md-row justify-content-between gap-3 mb-4">
+    <div class="container-xl page-shell team-attendance-page" data-team-attendance data-status-url="{{ $statusUrl }}">
+        <header class="team-thread-header">
             <div>
-                <span class="badge text-bg-secondary mb-2">{{ $accessLabel }}</span>
-                <h1 class="h2 mb-1">{{ $teamAttendance['department']['name'] }} Team Attendance</h1>
-                <p class="text-body-secondary mb-0">Operational attendance visibility for the current Manila work date.</p>
+                <span class="eyebrow">{{ $accessLabel }}</span>
+                <h1>{{ $teamAttendance['department']['name'] }} Team</h1>
+                <p class="team-summary-line">
+                    <span><strong data-summary="total">{{ $teamAttendance['summary']['total'] }}</strong> members</span>
+                    <span><strong data-summary="working">{{ $teamAttendance['summary']['working'] }}</strong> working</span>
+                    <span><strong data-summary="completed">{{ $teamAttendance['summary']['completed'] }}</strong> completed</span>
+                    <span><strong data-summary="on_leave">{{ $teamAttendance['summary']['on_leave'] }}</strong> on leave</span>
+                    <span><strong data-summary="not_clocked_in">{{ $teamAttendance['summary']['not_clocked_in'] }}</strong> not clocked in</span>
+                </p>
             </div>
-            <div class="text-md-end">
-                <p class="small text-body-secondary mb-1">Last updated</p>
-                <p class="small fw-semibold mb-0" data-last-updated>{{ $teamAttendance['last_updated'] }}</p>
-                <p class="small text-danger mb-0 d-none" data-refresh-error>Refresh unavailable. Displaying the last successful update.</p>
+            <div class="team-refresh-status" aria-live="polite">
+                <span><i class="ti ti-refresh" aria-hidden="true"></i> Updated <span data-last-updated>{{ $teamAttendance['last_updated'] }}</span></span>
+                <span class="text-danger d-none" data-refresh-error>Refresh unavailable. Showing the last successful update.</span>
             </div>
-        </div>
+        </header>
 
-        <div class="row g-3 mb-4">
-            <div class="col-6 col-lg-3"><div class="card border-0 shadow-sm h-100"><div class="card-body"><p class="detail-label mb-1">Team members</p><p class="h3 mb-0" data-summary="total">{{ $teamAttendance['summary']['total'] }}</p></div></div></div>
-            <div class="col-6 col-lg-3"><div class="card border-0 shadow-sm h-100"><div class="card-body"><p class="detail-label mb-1">Working</p><p class="h3 text-success mb-0" data-summary="working">{{ $teamAttendance['summary']['working'] }}</p></div></div></div>
-            <div class="col-6 col-lg-3"><div class="card border-0 shadow-sm h-100"><div class="card-body"><p class="detail-label mb-1">Completed today</p><p class="h3 text-primary mb-0" data-summary="completed">{{ $teamAttendance['summary']['completed'] }}</p></div></div></div>
-            <div class="col-6 col-lg-3"><div class="card border-0 shadow-sm h-100"><div class="card-body"><p class="detail-label mb-1">Not clocked in</p><p class="h3 text-secondary mb-0" data-summary="not_clocked_in">{{ $teamAttendance['summary']['not_clocked_in'] }}</p></div></div></div>
-        </div>
-
-        <div class="card border-0 shadow-sm">
-            <div class="table-responsive">
-                <table class="table table-hover align-middle mb-0">
-                    <thead class="table-light"><tr><th>Employee</th><th>Status</th><th>Work Arrangement</th><th>Work date</th><th>Time In</th><th>Time Out</th></tr></thead>
-                    <tbody data-team-members>
-                        @forelse ($teamAttendance['members'] as $member)
-                            <tr>
-                                <td><span class="fw-semibold">{{ $member['employee_name'] }}</span><br><span class="small text-body-secondary">{{ $member['employee_number'] }}</span></td>
-                                <td><span class="badge status-badge text-bg-{{ $member['status'] === 'Working' ? 'success' : ($member['status'] === 'Completed' ? 'primary' : 'secondary') }}">{{ $member['status'] }}</span></td>
-                                <td>{{ $member['work_arrangement'] ?? '—' }}</td>
-                                <td>{{ $member['work_date'] ?? '—' }}</td>
-                                <td>{{ $member['time_in'] ?? '—' }}</td>
-                                <td>{{ $member['time_out'] ?? '—' }}</td>
-                            </tr>
-                        @empty
-                            <tr><td class="text-center text-body-secondary py-5" colspan="6">No active employees are assigned to this department.</td></tr>
-                        @endforelse
-                    </tbody>
-                </table>
+        <section class="team-thread" aria-labelledby="activity-heading">
+            <div class="team-thread-heading">
+                <div>
+                    <p class="eyebrow mb-1">Live department activity</p>
+                    <h2 id="activity-heading">Attendance thread</h2>
+                </div>
+                <span class="live-indicator"><span aria-hidden="true"></span>Auto-refreshes</span>
             </div>
-        </div>
+
+            <ol class="attendance-feed" data-team-activity aria-label="Attendance activity">
+                @forelse ($teamAttendance['activity'] as $event)
+                    @if ($loop->first || $event['date_label'] !== $teamAttendance['activity'][$loop->index - 1]['date_label'])
+                        <li class="feed-date-separator" aria-label="{{ $event['date_label'] }}"><span>{{ $event['date_label'] }}</span></li>
+                    @endif
+                    <li class="attendance-event {{ $event['event'] === 'Not Clocked In' ? 'attendance-event-muted' : ($event['event'] === 'On Leave' ? 'attendance-event-leave' : '') }}">
+                        <span class="avatar attendance-avatar" aria-hidden="true">{{ $event['employee_initials'] }}</span>
+                        <div class="attendance-event-content">
+                            <div class="attendance-event-main">
+                                <span class="attendance-event-name">{{ $event['employee_name'] }}</span>
+                                @if ($event['is_hr_representative'])
+                                    <span class="hr-badge" aria-label="HR Representative" title="HR Representative">HR</span>
+                                @endif
+                                @if ($event['event_time'] !== null)
+                                    <time datetime="{{ $event['occurred_at'] }}">{{ $event['event_time'] }}</time>
+                                @endif
+                            </div>
+                            <p class="attendance-event-action mb-0">{{ $event['event'] }}</p>
+                            @if ($event['work_arrangement'] !== null)
+                                <div class="attendance-event-meta">
+                                    <span class="arrangement-chip">{{ $event['work_arrangement'] }}</span>
+                                </div>
+                            @endif
+                        </div>
+                    </li>
+                @empty
+                    <li class="feed-empty-state">No active employees are assigned to this department.</li>
+                @endforelse
+            </ol>
+        </section>
+
+        <script type="application/json" data-team-initial-payload>@json(['activity' => $teamAttendance['activity']])</script>
     </div>
 @endsection

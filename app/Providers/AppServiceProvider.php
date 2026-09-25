@@ -12,6 +12,7 @@ use Illuminate\Pagination\Paginator;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\ServiceProvider;
+use Illuminate\Support\Str;
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -72,6 +73,22 @@ class AppServiceProvider extends ServiceProvider
 
         RateLimiter::for('employee-invitation-accept', function (Request $request): Limit {
             return Limit::perMinute(10)->by('invitation-accept:'.$request->ip());
+        });
+
+        RateLimiter::for('password-recovery', function (Request $request): Limit {
+            return Limit::perMinute(5)->by(
+                'password-recovery:'.Str::transliterate(
+                    Str::lower($request->string('email')->trim()),
+                ).'|'.$request->ip(),
+            );
+        });
+
+        RateLimiter::for('password-reset', function (Request $request): Limit {
+            return Limit::perMinute(5)->by(
+                'password-reset:'.Str::transliterate(
+                    Str::lower($request->string('email')->trim()),
+                ).'|'.$request->ip(),
+            );
         });
     }
 }

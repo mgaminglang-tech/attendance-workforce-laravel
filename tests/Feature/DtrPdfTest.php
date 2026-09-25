@@ -6,6 +6,7 @@ use App\Enums\WorkArrangement;
 use App\Models\AttendanceAdjustment;
 use App\Models\AttendanceSession;
 use App\Models\Employee;
+use App\Models\EmployeeLeaveDay;
 use App\Models\User;
 use App\Services\BuildMonthlyDtr;
 use Carbon\CarbonImmutable;
@@ -27,7 +28,7 @@ class DtrPdfTest extends TestCase
         $session = AttendanceSession::factory()->for($employee)->create([
             'work_date' => '2026-09-23',
             'time_in_at' => '2026-09-23 08:25:00',
-            'time_out_at' => '2026-09-23 17:30:00',
+            'time_out_at' => '2026-09-23 13:47:00',
             'work_arrangement' => WorkArrangement::OfficeBased,
         ]);
         AttendanceAdjustment::factory()->for($session)->create([
@@ -45,14 +46,14 @@ class DtrPdfTest extends TestCase
         $pdfHtml = view('dtr.pdf', ['dtr' => $dtr])->render();
         $netHours = $dtr['rows'][22]['total_hours'];
 
-        $this->assertSame('8.08', $netHours);
+        $this->assertSame('5.37', $netHours);
         $this->assertStringContainsString($netHours, $previewHtml);
         $this->assertStringContainsString('WORK FROM HOME MONTHLY ATTENDANCE CERTIFICATION', $pdfHtml);
         $this->assertStringContainsString('SEPTEMBER 01, 2026', $pdfHtml);
         $this->assertStringContainsString('SEPTEMBER 30, 2026', $pdfHtml);
         $this->assertStringContainsString('Maria Santos', $pdfHtml);
         $this->assertStringContainsString('8:25 AM', $pdfHtml);
-        $this->assertStringContainsString('5:30 PM', $pdfHtml);
+        $this->assertStringContainsString('1:47 PM', $pdfHtml);
         $this->assertStringContainsString($netHours, $pdfHtml);
         $this->assertStringContainsString('OFFICE-BASED', $pdfHtml);
         $this->assertStringContainsString('Prepared by:', $pdfHtml);
@@ -75,6 +76,32 @@ class DtrPdfTest extends TestCase
             'filename=DTR_EMP_01_2026_2026-09.pdf',
             (string) $response->headers->get('content-disposition'),
         );
+    }
+
+    public function test_leave_appears_in_employee_preview_and_pdf_without_fabricated_attendance_values(): void
+    {
+        $user = User::factory()->employee()->create();
+        $employee = Employee::factory()->for($user)->create();
+        EmployeeLeaveDay::factory()->for($employee)->create(['leave_date' => '2026-09-12']);
+        $dtr = app(BuildMonthlyDtr::class)->handle(
+            $employee,
+            CarbonImmutable::parse('2026-09-01', 'Asia/Manila'),
+        );
+
+        $previewHtml = view('dtr._preview', ['dtr' => $dtr, 'pdfUrl' => '/dtr.pdf'])->render();
+        $pdfHtml = view('dtr.pdf', ['dtr' => $dtr])->render();
+
+        $this->assertStringContainsString('ON LEAVE', $previewHtml);
+        $this->assertStringContainsString('ON LEAVE', $pdfHtml);
+        $this->assertStringNotContainsString('<span class="badge arrangement-badge"></span>', $previewHtml);
+
+        $this->actingAs($user)->get(route('employee.dtr.preview', ['month' => '2026-09']))
+            ->assertOk()
+            ->assertSee('ON LEAVE');
+
+        $this->actingAs($user)->get(route('employee.dtr.pdf', ['month' => '2026-09']))
+            ->assertOk()
+            ->assertHeader('content-type', 'application/pdf');
     }
 
     #[DataProvider('calendarMonths')]

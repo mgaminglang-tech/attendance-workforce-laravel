@@ -31,6 +31,11 @@ class Employee extends Model
         return $this->hasMany(AttendanceSession::class);
     }
 
+    public function leaveDays(): HasMany
+    {
+        return $this->hasMany(EmployeeLeaveDay::class);
+    }
+
     /**
      * @return array<string, string>
      */

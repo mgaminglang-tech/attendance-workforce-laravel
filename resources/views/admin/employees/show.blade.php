@@ -4,18 +4,18 @@
 
 @section('content')
     @php($status = $employee->user->account_status->value)
-    <div class="container py-5">
-        <div class="d-flex flex-wrap justify-content-between align-items-center gap-3 mb-4">
+    <div class="container-xxl page-shell">
+        <header class="page-header d-flex flex-column flex-md-row justify-content-between align-items-md-end gap-3">
             <div><a class="text-decoration-none" href="{{ route('admin.employees.index') }}">&larr; Employees</a><h1 class="h2 mt-2 mb-1">{{ $employee->user->name }}</h1><p class="text-body-secondary mb-0">{{ $employee->employee_number }}</p></div>
             <a class="btn btn-outline-primary" href="{{ route('admin.employees.edit', $employee) }}">Edit details</a>
-        </div>
+        </header>
 
         @error('invitation')<div class="alert alert-danger">{{ $message }}</div>@enderror
         @error('account_status')<div class="alert alert-danger">{{ $message }}</div>@enderror
 
         <div class="row g-4">
             <div class="col-lg-8">
-                <div class="card border-0 shadow-sm h-100"><div class="card-body p-4">
+                <div class="card surface-card h-100"><div class="card-body p-4">
                     <h2 class="h5 mb-4">Workforce profile</h2>
                     <div class="row g-4">
                         <div class="col-sm-6"><div class="detail-label">Email</div><div>{{ $employee->user->email }}</div></div>
@@ -27,9 +27,9 @@
                 </div></div>
             </div>
             <div class="col-lg-4">
-                <div class="card border-0 shadow-sm"><div class="card-body p-4">
+                <div class="card surface-card"><div class="card-body p-4">
                     <h2 class="h5 mb-3">Account access</h2>
-                    <p><span class="badge text-bg-{{ $status === 'active' ? 'success' : ($status === 'pending' ? 'warning' : 'secondary') }}">{{ ucfirst($status) }}</span></p>
+                    <p><span class="badge status-badge status-badge-{{ $status }}">{{ ucfirst($status) }}</span></p>
                     @if ($status === 'pending')
                         <p class="small text-body-secondary">Invitation expires {{ $employee->user->employeeInvitation?->expires_at?->diffForHumans() ?? 'soon' }}.</p>
                         <form method="POST" action="{{ route('admin.employees.invitation.store', $employee) }}">@csrf<button class="btn btn-outline-primary w-100" type="submit">Resend invitation</button></form>

@@ -6,6 +6,7 @@ use App\Models\AttendanceSession;
 use App\Models\Department;
 use App\Models\DepartmentHrAssignment;
 use App\Models\Employee;
+use App\Models\EmployeeLeaveDay;
 use App\Models\User;
 use Illuminate\Foundation\Testing\LazilyRefreshDatabase;
 use Tests\TestCase;
@@ -24,13 +25,36 @@ class HrDtrTest extends TestCase
             ->for($finance)
             ->inactive()
             ->create(['employee_number' => 'FIN-HIST']);
+        $financeColleague = Employee::factory()
+            ->for(User::factory()->employee()->state(['name' => 'Finance Colleague']))
+            ->for($finance)
+            ->create(['employee_number' => 'FIN-TEAM']);
+        $otherDepartmentEmployee = Employee::factory()
+            ->for(User::factory()->employee()->state(['name' => 'Other Department Employee']))
+            ->for(Department::factory()->create())
+            ->create(['employee_number' => 'OTHER-TEAM']);
         AttendanceSession::factory()->for($employee)->create(['work_date' => '2026-09-12']);
+        EmployeeLeaveDay::factory()->for($employee)->create(['leave_date' => '2026-09-13']);
 
         $this->actingAs($representative)->get(route('hr.dtr.preview', [
             'employee' => $employee,
             'month' => '2026-09',
         ]))->assertOk()
+            ->assertSee('September 2026')
+            ->assertSee('type="month"', false)
+            ->assertSee('value="2026-09"', false)
             ->assertSee('Historical Employee')
+            ->assertSee('ON LEAVE')
+            ->assertSee('Finance Colleague')
+            ->assertSee('data-employee-number="FIN-TEAM"', false)
+            ->assertSee('data-employee-picker-action="true"', false)
+            ->assertDontSee('Other Department Employee')
+            ->assertDontSee('data-employee-number="OTHER-TEAM"', false)
+            ->assertViewHas('employees', function ($employees) use ($employee, $financeColleague, $otherDepartmentEmployee): bool {
+                return $employees->contains($employee)
+                    && $employees->contains($financeColleague)
+                    && ! $employees->contains($otherDepartmentEmployee);
+            })
             ->assertViewHas('dtr', fn (array $dtr): bool => $dtr['employee']->is($employee));
 
         $response = $this->actingAs($representative)->get(route('hr.dtr.pdf', [
