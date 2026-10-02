@@ -57,6 +57,7 @@ const monthFormatter = new Intl.DateTimeFormat('en-PH', {
 
 document.querySelectorAll('[data-month-picker]').forEach((monthPicker) => {
     const input = monthPicker.querySelector('input[type="month"]');
+    const control = monthPicker.querySelector('.month-picker-control');
     const display = monthPicker.querySelector('[data-month-display]');
     const accessibleDisplay = monthPicker.querySelector('[data-month-accessible-display]');
     const updateDisplay = () => {
@@ -68,6 +69,23 @@ document.querySelectorAll('[data-month-picker]').forEach((monthPicker) => {
         display.textContent = formatted;
         accessibleDisplay.textContent = formatted;
     };
+
+    control.addEventListener('click', (event) => {
+        if (event.pointerType === 'touch') {
+            return;
+        }
+
+        input.focus();
+
+        if (typeof input.showPicker === 'function') {
+            try {
+                input.showPicker();
+                event.preventDefault();
+            } catch {
+                input.focus();
+            }
+        }
+    });
 
     input.addEventListener('change', updateDisplay);
 });

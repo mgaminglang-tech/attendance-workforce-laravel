@@ -3,6 +3,10 @@
 .env
 .env.backup
 .env.production
+.env.e2e
+/e2e/.auth/
+/playwright-report/
+/test-results/
 .phpactor.json
 .phpunit.result.cache
 /.codex
