@@ -165,4 +165,4 @@ php artisan config:cache
 php artisan route:cache
 php artisan view:cache
 
-printf '\nApplication deployment complete. Configure Nginx, DNS, and HTTPS as described in DEPLOYMENT.md. Initial Global Admin bootstrap remains pending.\n'
+printf '\nApplication deployment complete. Configure Nginx, DNS, and HTTPS, then run php artisan app:create-global-admin interactively as described in DEPLOYMENT.md.\n'

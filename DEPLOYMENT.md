@@ -137,7 +137,16 @@ If mail is required, enter provider-supplied `MAIL_MAILER=smtp`, `MAIL_SCHEME`, 
 
 ## K. Create initial Global Admin
 
-A production-safe first Global Admin bootstrap procedure is **pending**. The scripts intentionally do not seed an admin or invent credentials. Decide and review a secure, auditable one-time procedure before live use. Do not use development seeders or hard-coded passwords in production.
+Run this only after production migrations have completed successfully. From the application checkout, as the non-root deploy account, use an interactive terminal (for SSH, allocate a terminal with `ssh -t`):
+
+```bash
+cd /var/www/attendance-workforce
+php artisan app:create-global-admin
+```
+
+Use the actual application directory if it differs from this example. Enter a full name and a company-controlled admin email, followed by a password and password confirmation. Both password prompts are hidden; choose a unique password with at least 12 characters, uppercase and lowercase letters, a number, and a symbol. There are no default credentials or password command-line arguments. Do not pipe answers, use `--no-interaction`, or record a terminal session containing credentials. If hidden input is unavailable, the command stops without creating an account.
+
+The account uses the existing Global Admin role (`admin`) and is active immediately, without invitation activation. Global Admins have no Employee profile or employee number. Email is trimmed and lowercased, and an existing email is rejected. If any Global Admin exists, including a disabled one, the command warns and requires explicit confirmation before creating another account; declining makes no changes. The account is created in a transaction and serialized with a database cache lock, so run migrations first. A validation or creation failure returns a nonzero exit status. For an unexpected failure, check whether the account exists before retrying. Never run development seeders in production.
 
 ## L. Production smoke test
 
