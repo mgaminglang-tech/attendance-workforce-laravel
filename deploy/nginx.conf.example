@@ -1,0 +1,41 @@
+server {
+    listen 80;
+    listen [::]:80;
+    server_name DOMAIN;
+    root APP_PATH/public;
+    index index.php;
+
+    add_header X-Content-Type-Options nosniff always;
+    add_header Referrer-Policy strict-origin-when-cross-origin always;
+
+    location / {
+        try_files $uri $uri/ /index.php?$query_string;
+    }
+
+    location = /.env {
+        deny all;
+    }
+
+    location ^~ /storage/private/ {
+        deny all;
+    }
+
+    location ^~ /storage/app/private/ {
+        deny all;
+    }
+
+    location ~ /\.(?!well-known/) {
+        deny all;
+    }
+
+    location ~ ^/index\.php(/|$) {
+        fastcgi_pass unix:/run/php/php8.4-fpm.sock;
+        fastcgi_param SCRIPT_FILENAME $realpath_root$fastcgi_script_name;
+        include fastcgi_params;
+        internal;
+    }
+
+    location ~ \.php$ {
+        return 404;
+    }
+}
