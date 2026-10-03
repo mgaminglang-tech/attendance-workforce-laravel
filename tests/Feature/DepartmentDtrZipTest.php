@@ -9,10 +9,16 @@ use App\Models\Employee;
 use App\Models\EmployeeLeaveDay;
 use App\Models\User;
 use App\Services\MonthlyDtrPdf;
+use Illuminate\Filesystem\Filesystem;
 use Illuminate\Foundation\Testing\LazilyRefreshDatabase;
 use Illuminate\Support\Facades\File;
+use Illuminate\Support\Facades\Response;
 use Illuminate\Support\Str;
+use Illuminate\Testing\TestResponse;
+use Mockery;
+use PHPUnit\Framework\Attributes\DataProvider;
 use RuntimeException;
+use Symfony\Component\HttpFoundation\BinaryFileResponse;
 use Tests\TestCase;
 use ZipArchive;
 
@@ -37,6 +43,12 @@ class DepartmentDtrZipTest extends TestCase
         AttendanceSession::factory()->for($foreign)->create(['work_date' => '2026-09-10']);
         $temporaryBefore = $this->temporaryZipFiles();
 
+        $this->partialMock(Filesystem::class, function ($mock): void {
+            $mock->shouldNotReceive('get')->with(Mockery::on(
+                fn (string $path): bool => str_starts_with($path, storage_path('app/private/dtr-bulk')),
+            ));
+        });
+
         $response = $this->actingAs($admin)->get(route('admin.reports.dtr.bulk', [
             'department' => $finance->id,
             'month' => '2026-09',
@@ -52,7 +64,7 @@ class DepartmentDtrZipTest extends TestCase
             (string) $response->headers->get('content-disposition'),
         );
 
-        $entries = $this->zipEntries($response->getContent());
+        $entries = $this->zipEntries($this->downloadContent($response));
 
         $this->assertSame([
             'DTR_FIN-001_2026-09.pdf',
@@ -72,7 +84,7 @@ class DepartmentDtrZipTest extends TestCase
         $itResponse->assertOk();
         $this->assertSame(
             ['DTR_IT-001_2026-09.pdf'],
-            array_keys($this->zipEntries($itResponse->getContent())),
+            array_keys($this->zipEntries($this->downloadContent($itResponse))),
         );
     }
 
@@ -102,7 +114,7 @@ class DepartmentDtrZipTest extends TestCase
         $response->assertOk();
         $this->assertSame(
             '%PDF-1.4 shared net hours',
-            $this->zipEntries($response->getContent())['DTR_FIN-001_2026-09.pdf'],
+            $this->zipEntries($this->downloadContent($response))['DTR_FIN-001_2026-09.pdf'],
         );
     }
 
@@ -130,7 +142,7 @@ class DepartmentDtrZipTest extends TestCase
         $response->assertOk();
         $this->assertSame(
             '%PDF-1.4 shared leave row',
-            $this->zipEntries($response->getContent())['DTR_FIN-001_2026-09.pdf'],
+            $this->zipEntries($this->downloadContent($response))['DTR_FIN-001_2026-09.pdf'],
         );
     }
 
@@ -147,10 +159,15 @@ class DepartmentDtrZipTest extends TestCase
             'month' => '2026-09',
         ]));
 
-        $response->assertOk()->assertHeader('content-type', 'application/zip');
+        $response->assertOk()
+            ->assertDownload('Finance_DTR_2026-09.zip')
+            ->assertHeader('content-type', 'application/zip')
+            ->assertHeader('x-content-type-options', 'nosniff');
+        $this->assertStringContainsString('private', (string) $response->headers->get('cache-control'));
+        $this->assertStringContainsString('no-store', (string) $response->headers->get('cache-control'));
         $this->assertSame(
             ['DTR_FIN-001_2026-09.pdf'],
-            array_keys($this->zipEntries($response->getContent())),
+            array_keys($this->zipEntries($this->downloadContent($response))),
         );
 
         $this->actingAs($representative)->get(route('hr.reports.dtr.bulk', [
@@ -176,7 +193,7 @@ class DepartmentDtrZipTest extends TestCase
         ]));
 
         $response->assertOk();
-        $entries = $this->zipEntries($response->getContent());
+        $entries = $this->zipEntries($this->downloadContent($response));
 
         $this->assertCount(30, $entries);
         $this->assertArrayHasKey('DTR_EMP-0001_2026-09.pdf', $entries);
@@ -224,6 +241,124 @@ class DepartmentDtrZipTest extends TestCase
             ->assertSee('The department DTR archive could not be generated. Please try again.')
             ->assertDontSee('private path failure');
         $this->assertSame($temporaryBefore, $this->temporaryZipFiles());
+    }
+
+    #[DataProvider('bulkRoutes')]
+    public function test_zip_finalization_failure_cleans_up_and_returns_a_generic_error(string $routeName): void
+    {
+        $department = Department::factory()->create();
+        Employee::factory()->for($department)->create();
+        $user = $routeName === 'admin.reports.dtr.bulk'
+            ? User::factory()->admin()->create()
+            : User::factory()->employee()->has(Employee::factory())->create();
+
+        if ($routeName === 'hr.reports.dtr.bulk') {
+            DepartmentHrAssignment::factory()->for($department)->for($user)->create();
+        }
+
+        $originalStorage = storage_path();
+        $temporaryStorage = storage_path('framework/testing/zip-finalization-'.Str::uuid());
+        $cleanupPath = null;
+        $this->app->useStoragePath($temporaryStorage);
+        $directory = storage_path('app/private/dtr-bulk');
+        $this->partialMock(Filesystem::class, function ($mock) use ($directory, &$cleanupPath): void {
+            $mock->shouldReceive('delete')->once()
+                ->withArgs(function (string $path) use ($directory, &$cleanupPath): bool {
+                    $cleanupPath = $path;
+
+                    return str_starts_with($path, $directory);
+                })->passthru();
+        });
+        $this->mock(MonthlyDtrPdf::class, function ($mock) use ($directory): void {
+            $mock->shouldReceive('filename')->once()->andReturn('DTR_EMP-0001_2026-09.pdf');
+            $mock->shouldReceive('render')->once()->andReturnUsing(function () use ($directory): string {
+                $this->assertTrue(rmdir($directory));
+
+                return '%PDF-1.4 finalization failure fixture';
+            });
+        });
+
+        try {
+            $this->actingAs($user)->get(route($routeName, [
+                'department' => $department->id,
+                'month' => '2026-09',
+            ]))->assertServerError()
+                ->assertSee('The department DTR archive could not be generated. Please try again.')
+                ->assertDontSee($temporaryStorage);
+
+            $this->assertIsString($cleanupPath);
+            $this->assertFileDoesNotExist($cleanupPath);
+        } finally {
+            $this->app->useStoragePath($originalStorage);
+            File::deleteDirectory($temporaryStorage);
+        }
+    }
+
+    #[DataProvider('bulkRoutes')]
+    public function test_response_creation_failure_removes_completed_archive(string $routeName): void
+    {
+        $department = Department::factory()->create();
+        Employee::factory()->for($department)->create();
+        $user = $routeName === 'admin.reports.dtr.bulk'
+            ? User::factory()->admin()->create()
+            : User::factory()->employee()->has(Employee::factory())->create();
+
+        if ($routeName === 'hr.reports.dtr.bulk') {
+            DepartmentHrAssignment::factory()->for($department)->for($user)->create();
+        }
+
+        $temporaryBefore = $this->temporaryZipFiles();
+        $archivePath = null;
+        $this->mock(MonthlyDtrPdf::class, function ($mock): void {
+            $mock->shouldReceive('filename')->once()->andReturn('DTR_EMP-0001_2026-09.pdf');
+            $mock->shouldReceive('render')->once()->andReturn('%PDF-1.4 response failure fixture');
+        });
+        Response::partialMock()->shouldReceive('download')
+            ->once()
+            ->withArgs(function (string $path, string $filename, array $headers) use (&$archivePath): bool {
+                $archivePath = $path;
+                $this->assertFileExists($path);
+
+                return true;
+            })
+            ->andThrow(new RuntimeException('private response creation failure'));
+
+        $this->actingAs($user)->get(route($routeName, [
+            'department' => $department->id,
+            'month' => '2026-09',
+        ]))->assertServerError()
+            ->assertSee('The department DTR archive could not be generated. Please try again.')
+            ->assertDontSee('private response creation failure');
+
+        $this->assertIsString($archivePath);
+        $this->assertFileDoesNotExist($archivePath);
+        $this->assertSame($temporaryBefore, $this->temporaryZipFiles());
+    }
+
+    /** @return array<string, array{string}> */
+    public static function bulkRoutes(): array
+    {
+        return [
+            'admin' => ['admin.reports.dtr.bulk'],
+            'HR' => ['hr.reports.dtr.bulk'],
+        ];
+    }
+
+    private function downloadContent(TestResponse $response): string
+    {
+        $this->assertInstanceOf(BinaryFileResponse::class, $response->baseResponse);
+        $this->assertFalse($response->getContent());
+        $this->assertTrue($response->baseResponse->shouldDeleteFileAfterSend());
+        $path = $response->baseResponse->getFile()->getPathname();
+        $this->assertStringStartsWith(storage_path('app/private/dtr-bulk'), $path);
+        $this->assertFileExists($path);
+        $this->assertStringNotContainsString($path, (string) $response->headers->get('content-disposition'));
+
+        $content = $response->streamedContent();
+
+        $this->assertFileDoesNotExist($path);
+
+        return $content;
     }
 
     /** @return array<string, string> */

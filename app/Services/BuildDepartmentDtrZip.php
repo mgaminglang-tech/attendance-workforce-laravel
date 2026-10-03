@@ -20,7 +20,7 @@ class BuildDepartmentDtrZip
         private Filesystem $files,
     ) {}
 
-    /** @return array{filename: string, content: string, employee_count: int} */
+    /** @return array{filename: string, path: string, employee_count: int} */
     public function handle(Department $department, CarbonImmutable $selectedMonth): array
     {
         $month = $selectedMonth->format('Y-m');
@@ -29,6 +29,7 @@ class BuildDepartmentDtrZip
         $temporaryZipPath = $directory.DIRECTORY_SEPARATOR.'dtr-'.Str::uuid().'.zip';
         $archive = null;
         $archiveIsOpen = false;
+        $archiveIsReady = false;
 
         try {
             $employees = Employee::query()
@@ -70,11 +71,15 @@ class BuildDepartmentDtrZip
                 throw new RuntimeException('Unable to finalize the DTR ZIP archive.');
             }
 
-            return [
+            $result = [
                 'filename' => $this->archiveFilename($department, $month),
-                'content' => $this->files->get($temporaryZipPath),
+                'path' => $temporaryZipPath,
                 'employee_count' => $employees->count(),
             ];
+
+            $archiveIsReady = true;
+
+            return $result;
         } catch (Throwable $exception) {
             throw new BulkDtrGenerationException(
                 departmentId: $department->getKey(),
@@ -82,11 +87,17 @@ class BuildDepartmentDtrZip
                 previous: $exception,
             );
         } finally {
-            if ($archiveIsOpen) {
-                $archive?->close();
+            if (! $archiveIsReady) {
+                try {
+                    if ($archiveIsOpen) {
+                        $archive?->close();
+                    }
+                } catch (Throwable $cleanupException) {
+                    report($cleanupException);
+                } finally {
+                    $this->files->delete($temporaryZipPath);
+                }
             }
-
-            $this->files->delete($temporaryZipPath);
         }
     }
 
