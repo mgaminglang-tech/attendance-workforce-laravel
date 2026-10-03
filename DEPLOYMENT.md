@@ -119,6 +119,15 @@ sudo systemctl reload nginx
 
 The template starts with HTTP so Certbot can perform domain validation. Do not use the site for production traffic until HTTPS is enabled. The private DTR directory is under `storage/app/private`, outside the web root; never symlink it into `public`.
 
+Workforce is not intended to be embedded in frames. CSP `frame-ancestors 'none'` is the primary modern anti-framing control; `X-Frame-Options: DENY` is retained for compatibility. Production Workforce responses must include all four headers below. Preserve them on the legitimate application HTTPS virtual host after Certbot changes, and through any reverse-proxy or CDN changes, without duplicate conflicting values:
+
+```http
+Content-Security-Policy: frame-ancestors 'none'
+X-Frame-Options: DENY
+X-Content-Type-Options: nosniff
+Referrer-Policy: strict-origin-when-cross-origin
+```
+
 ## H. Configure domain DNS
 
 Create the needed A/AAAA records with your DNS provider, pointing to the VPS public addresses. Verify they resolve to this VPS and that the infrastructure owner permits inbound ports 80 and 443 while keeping SSH access controlled. DNS changes are manual.
@@ -140,6 +149,7 @@ Follow Certbot prompts, verify an HTTPS request and redirect behavior, and keep 
 Replace the domain and `SERVER_IP` placeholders below; run only against infrastructure you are authorized to verify:
 
 ```bash
+curl -I https://workforce.example.com/
 curl -I --resolve workforce.example.com:443:SERVER_IP https://workforce.example.com/
 curl -I --resolve workforce.example.com:80:SERVER_IP http://workforce.example.com/
 curl -I -H 'Host: evil.example.test' http://SERVER_IP/
@@ -147,6 +157,8 @@ curl -I http://SERVER_IP/
 curl -I --resolve evil.example.test:443:SERVER_IP https://evil.example.test/
 curl -I --resolve workforce.example.com:443:SERVER_IP -H 'Host: evil.example.test' https://workforce.example.com/
 ```
+
+For the legitimate HTTPS responses, confirm `Content-Security-Policy` contains `frame-ancestors 'none'`, `X-Frame-Options` is `DENY`, `X-Content-Type-Options` is `nosniff`, and `Referrer-Policy` is `strict-origin-when-cross-origin`. Repeat these header checks after Certbot, reverse-proxy, or CDN changes. Header inspection alone does not verify browser enforcement; confirm hostile iframe embedding is blocked in an authorized browser test after deployment.
 
 The legitimate HTTPS request must serve the application with a valid certificate; legitimate HTTP must follow the reviewed HTTPS redirect/ACME behavior. Unknown HTTP hosts, unknown SNI, and legitimate SNI paired with an unknown Host must be rejected by Nginx without a Workforce response or reflected/canonical redirect. A closed connection, TLS handshake rejection, or an explicit rejection status may occur; do not assume one universal status. Confirm rejection in local Nginx logs with no matching PHP/application request; a Laravel 400 response alone is not evidence of edge rejection. Repeat for IPv6 when enabled, using the appropriate bracketed address syntax.
 
