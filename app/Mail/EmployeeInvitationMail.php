@@ -35,7 +35,8 @@ class EmployeeInvitationMail extends Mailable
     public function content(): Content
     {
         return new Content(
-            markdown: 'mail.employee-invitation',
+            view: 'mail.employee-invitation',
+            text: 'mail.employee-invitation-text',
             with: [
                 'activationUrl' => route('invitations.show', ['token' => $this->token]),
             ],
