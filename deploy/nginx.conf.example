@@ -1,4 +1,20 @@
 server {
+    listen 80 default_server;
+    listen [::]:80 default_server;
+    server_name "";
+    return 444;
+}
+
+# Nginx >= 1.19.4: rejects TLS without requiring bootstrap certificates.
+server {
+    listen 443 ssl default_server;
+    listen [::]:443 ssl default_server;
+    server_name "";
+    ssl_reject_handshake on;
+    return 444;
+}
+
+server {
     listen 80;
     listen [::]:80;
     server_name DOMAIN;

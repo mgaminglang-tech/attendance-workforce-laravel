@@ -73,6 +73,27 @@ if grep -Eq "^DB_PASSWORD=(<.*>|null|NULL|\"\"|'')$" .env || grep -Eq '^APP_URL=
     exit 1
 fi
 
+if ! sed -n 's/^APP_URL=//p' .env | php -r '
+    $url = rtrim(stream_get_contents(STDIN), "\r\n");
+    $parts = parse_url($url);
+    $host = $parts["host"] ?? null;
+    exit(
+        filter_var($url, FILTER_VALIDATE_URL) !== false
+        && ($parts["scheme"] ?? null) === "https"
+        && is_string($host)
+        && filter_var($host, FILTER_VALIDATE_DOMAIN, FILTER_FLAG_HOSTNAME) !== false
+        && filter_var($host, FILTER_VALIDATE_IP) === false
+        && ! isset($parts["user"])
+        && ! isset($parts["pass"])
+        && ! isset($parts["query"])
+        && ! isset($parts["fragment"])
+        ? 0 : 1
+    );
+'; then
+    printf 'APP_URL must be a valid canonical HTTPS URL with a DNS hostname and no credentials, query, or fragment.\n' >&2
+    exit 1
+fi
+
 if [[ "$(git branch --show-current)" != "$BRANCH" ]]; then
     printf 'Expected branch %s. Refusing to change branches automatically.\n' "$BRANCH" >&2
     exit 1

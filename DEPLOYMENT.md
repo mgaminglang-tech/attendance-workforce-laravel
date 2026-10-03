@@ -75,6 +75,8 @@ Edit the existing active assignments instead of appending duplicates. Replace ev
 
 `MAIL_MAILER=log` is suitable only while email is intentionally inactive. Configure SMTP under section J before accepting email workflows.
 
+`APP_URL` is the canonical HTTPS production URL and the source of Laravel's exact Host allowlist. Use a valid DNS hostname, without credentials, query strings, or fragments; IP-address URLs are rejected. The deployment scripts validate this before proceeding. Laravel rejects other hosts outside local/testing environments and fails closed when this configuration is invalid. Subdomains are not automatically accepted. Keep the Nginx `DOMAIN` hostname identical to the hostname in `APP_URL`.
+
 ## E. Create MySQL database and least-privileged app user
 
 Use the local MySQL administrative account interactively on the VPS. Replace the sample database/user names and enter a unique private password. Do not save the real SQL with its password in Git. Keep MySQL listening on localhost; do not expose port 3306 publicly.
@@ -108,6 +110,8 @@ The script checks production settings, gives PHP-FPM access to `.env`, makes `st
 
 Replace `DOMAIN` and `APP_PATH` in the application's `deploy/nginx.conf.example` with the actual domain and absolute application path, then install the resulting server block under `/etc/nginx/sites-available/`. Enable it with a symlink in `sites-enabled` and disable the default site if it conflicts. Review the rendered file before enabling it. Its root must be `APP_PATH/public`, never the repository root. It routes requests only through `index.php` via the PHP 8.4 FPM socket, denies other PHP files, hidden files, and private storage paths, and sets basic content-type/referrer headers.
 
+The template includes rejecting IPv4/IPv6 defaults for ports 80 and 443. Remove or reconcile competing `default_server` listeners before enabling it. Unknown HTTP hosts and raw-IP requests must terminate at Nginx, without redirecting to Workforce or reaching PHP. The TLS default uses `ssl_reject_handshake` (Nginx 1.19.4 or newer with SSL support), requires no certificate, and rejects unknown/missing SNI. Its `return 444` also rejects an unknown HTTP Host after a handshake using legitimate SNI. Keep both defaults when Certbot adds the legitimate domain's certificate/listeners. Before certificate issuance, port 443 intentionally rejects all handshakes; the domain-specific HTTP block remains available for ACME validation. Verify the installed Nginx version and syntax before reloading.
+
 ```bash
 sudo nginx -t
 sudo systemctl reload nginx
@@ -130,6 +134,23 @@ sudo certbot renew --dry-run
 ```
 
 Follow Certbot prompts, verify an HTTPS request and redirect behavior, and keep `APP_URL=https://...` with `SESSION_SECURE_COOKIE=true`. Check the installed renewal timer and monitor certificate renewal. Neither deployment script edits DNS or runs Certbot. Recheck Nginx configuration after Certbot changes it.
+
+**Required before production traffic:** verify Certbot created a domain-specific HTTPS virtual host and preserved the rejecting defaults. Inspect `sudo nginx -T` locally on the server (do not publish its configuration), run `sudo nginx -t`, and repeat these checks after future Certbot/Nginx changes. The template is a starting configuration, not proof of the deployed TLS routing.
+
+Replace the domain and `SERVER_IP` placeholders below; run only against infrastructure you are authorized to verify:
+
+```bash
+curl -I --resolve workforce.example.com:443:SERVER_IP https://workforce.example.com/
+curl -I --resolve workforce.example.com:80:SERVER_IP http://workforce.example.com/
+curl -I -H 'Host: evil.example.test' http://SERVER_IP/
+curl -I http://SERVER_IP/
+curl -I --resolve evil.example.test:443:SERVER_IP https://evil.example.test/
+curl -I --resolve workforce.example.com:443:SERVER_IP -H 'Host: evil.example.test' https://workforce.example.com/
+```
+
+The legitimate HTTPS request must serve the application with a valid certificate; legitimate HTTP must follow the reviewed HTTPS redirect/ACME behavior. Unknown HTTP hosts, unknown SNI, and legitimate SNI paired with an unknown Host must be rejected by Nginx without a Workforce response or reflected/canonical redirect. A closed connection, TLS handshake rejection, or an explicit rejection status may occur; do not assume one universal status. Confirm rejection in local Nginx logs with no matching PHP/application request; a Laravel 400 response alone is not evidence of edge rejection. Repeat for IPv6 when enabled, using the appropriate bracketed address syntax.
+
+Reverse proxies/load balancers must preserve the canonical Host and prevent direct-origin bypass. This application does not broadly trust proxies. Only accept `X-Forwarded-Host` from explicitly configured trusted proxies after reviewing the topology; arbitrary clients must not be able to supply a trusted forwarded hostname. No proxy trust changes are part of this hardening.
 
 ## J. Configure mail
 

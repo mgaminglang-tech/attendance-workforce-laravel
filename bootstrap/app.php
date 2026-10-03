@@ -14,6 +14,29 @@ return Application::configure(basePath: dirname(__DIR__))
         health: '/up',
     )
     ->withMiddleware(function (Middleware $middleware): void {
+        $middleware->trustHosts(at: function (): array {
+            $url = config('app.url');
+            $parts = is_string($url) ? parse_url($url) : false;
+            $host = $parts['host'] ?? null;
+
+            abort_if(
+                ! is_string($url)
+                || filter_var($url, FILTER_VALIDATE_URL) === false
+                || ($parts['scheme'] ?? null) !== 'https'
+                || ! is_string($host)
+                || filter_var($host, FILTER_VALIDATE_DOMAIN, FILTER_FLAG_HOSTNAME) === false
+                || filter_var($host, FILTER_VALIDATE_IP) !== false
+                || isset($parts['user'])
+                || isset($parts['pass'])
+                || isset($parts['query'])
+                || isset($parts['fragment']),
+                503,
+                'APP_URL must be a valid canonical HTTPS URL.',
+            );
+
+            return ['\A'.preg_quote(strtolower($host)).'\z'];
+        }, subdomains: false);
+
         $middleware->alias([
             'account.active' => EnsureAccountIsActive::class,
             'role' => RequireRole::class,

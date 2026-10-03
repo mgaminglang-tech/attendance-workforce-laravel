@@ -134,6 +134,27 @@ for setting in '^APP_ENV=production$' '^APP_DEBUG=false$' '^APP_URL=https://[^[:
     fi
 done
 
+if ! sed -n 's/^APP_URL=//p' .env | php -r '
+    $url = rtrim(stream_get_contents(STDIN), "\r\n");
+    $parts = parse_url($url);
+    $host = $parts["host"] ?? null;
+    exit(
+        filter_var($url, FILTER_VALIDATE_URL) !== false
+        && ($parts["scheme"] ?? null) === "https"
+        && is_string($host)
+        && filter_var($host, FILTER_VALIDATE_DOMAIN, FILTER_FLAG_HOSTNAME) !== false
+        && filter_var($host, FILTER_VALIDATE_IP) === false
+        && ! isset($parts["user"])
+        && ! isset($parts["pass"])
+        && ! isset($parts["query"])
+        && ! isset($parts["fragment"])
+        ? 0 : 1
+    );
+'; then
+    printf 'APP_URL must be a valid canonical HTTPS URL with a DNS hostname and no credentials, query, or fragment.\n' >&2
+    exit 1
+fi
+
 printf 'Setting permissions for the deploy user and PHP-FPM...\n'
 umask 0002
 install -d -m 2770 storage/app/private/dtr-bulk
