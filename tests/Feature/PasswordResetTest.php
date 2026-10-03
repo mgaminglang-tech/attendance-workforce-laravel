@@ -16,6 +16,7 @@ use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Notification;
 use Illuminate\Support\Facades\Password;
+use Illuminate\Support\Str;
 use PHPUnit\Framework\Attributes\DataProvider;
 use Tests\TestCase;
 
@@ -190,6 +191,97 @@ class PasswordResetTest extends TestCase
         $this->assertAuthenticatedAs($user);
     }
 
+    public function test_password_reset_revokes_existing_database_sessions_without_affecting_other_users(): void
+    {
+        config(['session.driver' => 'database', 'session.connection' => 'sqlite']);
+        $user = User::factory()->employee()->create();
+        Employee::factory()->for($user)->create();
+        $otherUser = User::factory()->employee()->create();
+        Employee::factory()->for($otherUser)->create();
+        $sessionIds = [$this->loginWithDatabaseSession($user), $this->loginWithDatabaseSession($user)];
+        $otherSessionId = $this->loginWithDatabaseSession($otherUser);
+
+        foreach ($sessionIds as $sessionId) {
+            $this->switchDatabaseSession($sessionId);
+            $this->get(route('employee.dashboard'))->assertOk();
+            $this->assertAuthenticatedAs($user);
+        }
+
+        $this->switchDatabaseSession();
+        $this->get(route('password.request'))->assertOk();
+        $resetSessionId = session()->getId();
+        $token = Password::createToken($user);
+        $newPassword = 'NewStrongPassword!123';
+
+        $this->switchDatabaseSession($resetSessionId);
+        $this->post(route('password.update'), [
+            'token' => $token,
+            'email' => $user->email,
+            'password' => $newPassword,
+            'password_confirmation' => $newPassword,
+        ])->assertRedirect(route('login'))
+            ->assertSessionHas('status', 'Your password has been reset. You can now sign in.');
+        $this->assertGuest();
+        $this->assertDatabaseMissing('sessions', ['user_id' => $user->getKey()]);
+        $this->assertDatabaseHas('sessions', ['id' => $resetSessionId, 'user_id' => null]);
+
+        $this->switchDatabaseSession($resetSessionId);
+        $this->get(route('login'))->assertOk()
+            ->assertSee('Your password has been reset. You can now sign in.');
+
+        foreach ($sessionIds as $sessionId) {
+            $this->switchDatabaseSession($sessionId);
+            $this->get(route('employee.dashboard'))->assertRedirect(route('login'));
+            $this->assertGuest();
+        }
+
+        $this->switchDatabaseSession($otherSessionId);
+        $this->get(route('employee.dashboard'))->assertOk();
+        $this->assertAuthenticatedAs($otherUser);
+
+        $this->switchDatabaseSession();
+        $this->post(route('login.store'), [
+            'email' => $user->email,
+            'password' => 'password',
+        ])->assertSessionHasErrors('email');
+        $this->assertGuest();
+
+        $this->switchDatabaseSession();
+        $this->post(route('login.store'), [
+            'email' => $user->email,
+            'password' => $newPassword,
+        ])->assertRedirect(route('employee.dashboard'));
+        $this->assertAuthenticatedAs($user);
+        $newSessionId = session()->getId();
+
+        $this->switchDatabaseSession($newSessionId);
+        $this->get(route('employee.dashboard'))->assertOk();
+        $this->assertAuthenticatedAs($user);
+    }
+
+    public function test_failed_password_reset_preserves_existing_database_sessions(): void
+    {
+        config(['session.driver' => 'database', 'session.connection' => 'sqlite']);
+        $user = User::factory()->employee()->create();
+        Employee::factory()->for($user)->create();
+        $sessionId = $this->loginWithDatabaseSession($user);
+
+        $this->switchDatabaseSession();
+        $this->post(route('password.update'), [
+            'token' => 'invalid-token',
+            'email' => $user->email,
+            'password' => 'NewStrongPassword!123',
+            'password_confirmation' => 'NewStrongPassword!123',
+        ])->assertSessionHasErrors([
+            'email' => 'This password reset link is invalid or has expired.',
+        ]);
+
+        $this->assertDatabaseHas('sessions', ['id' => $sessionId, 'user_id' => $user->getKey()]);
+        $this->switchDatabaseSession($sessionId);
+        $this->get(route('employee.dashboard'))->assertOk();
+        $this->assertAuthenticatedAs($user);
+    }
+
     public function test_pending_and_disabled_accounts_cannot_use_preexisting_reset_tokens(): void
     {
         $pending = User::factory()->employee()->pending()->create();
@@ -290,6 +382,29 @@ class PasswordResetTest extends TestCase
         $this->post(route('password.email'), ['email' => $email])
             ->assertTooManyRequests();
         Notification::assertNothingSent();
+    }
+
+    private function loginWithDatabaseSession(User $user): string
+    {
+        $this->switchDatabaseSession();
+        $this->post(route('login.store'), [
+            'email' => $user->email,
+            'password' => 'password',
+        ])->assertRedirect(route('employee.dashboard'));
+        $sessionId = session()->getId();
+        $this->assertDatabaseHas('sessions', ['id' => $sessionId, 'user_id' => $user->getKey()]);
+
+        return $sessionId;
+    }
+
+    private function switchDatabaseSession(?string $sessionId = null): void
+    {
+        $this->app['auth']->forgetGuards();
+        $this->app->forgetInstance('auth.driver');
+        $this->app['session']->forgetDrivers();
+        $this->app->forgetInstance('session.store');
+        $this->app->forgetInstance('redirect');
+        $this->withCookie(config('session.cookie'), $sessionId ?? Str::random(40));
     }
 
     /** @return array<string, array{string, string}> */
