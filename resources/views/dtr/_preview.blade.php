@@ -32,8 +32,6 @@
                 <thead class="table-light">
                     <tr>
                         <th scope="col">Date</th>
-                        <th scope="col">Time In</th>
-                        <th scope="col">Time Out</th>
                         <th scope="col">Total Hrs.</th>
                         <th scope="col">Work Arrangement</th>
                         <th scope="col">Attendance Rendered</th>
@@ -44,8 +42,6 @@
                     @foreach ($dtr['rows'] as $row)
                         <tr>
                             <th class="text-nowrap fw-normal" scope="row">{{ $row['date_label'] }}</th>
-                            <td class="text-nowrap">{{ $row['time_in'] }}</td>
-                            <td class="text-nowrap">{{ $row['time_out'] }}</td>
                             <td>{{ $row['total_hours'] }}</td>
                             <td>
                                 @if ($row['has_legacy_arrangement'])

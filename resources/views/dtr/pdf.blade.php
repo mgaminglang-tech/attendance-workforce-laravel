@@ -80,11 +80,10 @@
             white-space: nowrap;
         }
 
-        .date-column { width: 21%; }
-        .time-column { width: 11.5%; }
-        .hours-column { width: 14.5%; }
-        .rendered-column { width: 19%; }
-        .remarks-column { width: 22.5%; }
+        .date-column { width: 24%; }
+        .hours-column { width: 21%; }
+        .rendered-column { width: 25%; }
+        .remarks-column { width: 30%; }
 
         .prepared {
             font-size: 10px;
@@ -127,8 +126,6 @@
         <thead>
             <tr>
                 <th class="date-column">DATE</th>
-                <th class="time-column">TIME<br>IN</th>
-                <th class="time-column">TIME<br>OUT</th>
                 <th class="hours-column">TOTAL HRS.<br>SPENT</th>
                 <th class="rendered-column">ATTENDANCE<br>RENDERED</th>
                 <th class="remarks-column">REMARKS</th>
@@ -138,8 +135,6 @@
             @foreach ($dtr['rows'] as $row)
                 <tr>
                     <td>{{ $row['date_label'] }}</td>
-                    <td>{{ $row['time_in'] }}</td>
-                    <td>{{ $row['time_out'] }}</td>
                     <td>{{ $row['total_hours'] }}</td>
                     <td>{{ $row['attendance_rendered'] }}</td>
                     <td>{{ $row['remarks'] }}</td>

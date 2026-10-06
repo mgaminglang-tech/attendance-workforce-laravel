@@ -35,6 +35,9 @@ class CreateEmployeeProfileTest extends TestCase
         $this->assertSame('EMP-100001', $employee->employee_number);
         $this->assertSame(EmploymentStatus::Active, $employee->employment_status);
         $this->assertSame('2026-02-01', $employee->hired_at->toDateString());
+        $this->assertNull($employee->first_name);
+        $this->assertNull($employee->last_name);
+        $this->assertSame($user->name, $employee->user->name);
     }
 
     public function test_admin_role_user_cannot_receive_an_employee_profile(): void

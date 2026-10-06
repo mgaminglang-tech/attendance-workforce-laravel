@@ -24,17 +24,28 @@ class MonthlyDtrPdf
     /** @param array<string, mixed> $dtr */
     public function filename(array $dtr): string
     {
-        $safeEmployeeNumber = Str::of((string) $dtr['employee_number'])
-            ->ascii()
-            ->replaceMatches('/[^A-Za-z0-9_-]+/', '_')
-            ->trim('_-')
-            ->value();
+        $employee = $dtr['employee'];
+        $firstName = $this->sanitizeName((string) $employee->first_name);
+        $lastName = $this->sanitizeName((string) $employee->last_name);
+        $name = $firstName !== '' && $lastName !== ''
+            ? $lastName.'_'.$firstName
+            : $this->sanitizeName($dtr['employee_name']);
 
-        if ($safeEmployeeNumber === '') {
-            $safeEmployeeNumber = 'EMPLOYEE';
+        if ($name === '') {
+            $name = 'EMPLOYEE';
         }
 
-        return "DTR_{$safeEmployeeNumber}_{$dtr['month']}.pdf";
+        return "DTR_{$name}_{$dtr['month']}.pdf";
+    }
+
+    private function sanitizeName(string $name): string
+    {
+        return Str::of($name)
+            ->ascii()
+            ->upper()
+            ->replaceMatches('/[^A-Z0-9]+/', '-')
+            ->trim('-')
+            ->value();
     }
 
     /** @param array<string, mixed> $dtr */

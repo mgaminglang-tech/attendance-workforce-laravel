@@ -42,7 +42,10 @@ class EmployeeDtrTest extends TestCase
             ->assertSee('type="month"', false)
             ->assertSee('value="2026-09"', false)
             ->assertSee('Own Employee')
-            ->assertSee('8:25 AM')
+            ->assertDontSee('8:25 AM')
+            ->assertDontSee('5:10 PM')
+            ->assertSee('7.75')
+            ->assertSee('Work Arrangement')
             ->assertSee('OFFICE-BASED')
             ->assertDontSee('Other Employee')
             ->assertDontSee('6:15 AM')
@@ -66,7 +69,7 @@ class EmployeeDtrTest extends TestCase
         $response->assertOk()
             ->assertHeader('content-type', 'application/pdf');
         $this->assertStringContainsString(
-            "filename=DTR_{$employee->employee_number}_2026-09.pdf",
+            'filename=DTR_PDF-EMPLOYEE_2026-09.pdf',
             (string) $response->headers->get('content-disposition'),
         );
         $this->assertStringStartsWith('%PDF-', $response->getContent());

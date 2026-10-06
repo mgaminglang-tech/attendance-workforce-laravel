@@ -22,6 +22,8 @@ class CreateEmployeeProfile
         ?string $jobTitle = null,
         EmploymentStatus $employmentStatus = EmploymentStatus::Active,
         ?DateTimeInterface $hiredAt = null,
+        ?string $firstName = null,
+        ?string $lastName = null,
     ): Employee {
         if (! $user->hasRole(UserRole::Employee)) {
             throw ValidationException::withMessages([
@@ -30,6 +32,8 @@ class CreateEmployeeProfile
         }
 
         return $user->employee()->create([
+            'first_name' => $firstName,
+            'last_name' => $lastName,
             'employee_number' => $employeeNumber,
             'department_id' => $department?->getKey(),
             'job_title' => $jobTitle,

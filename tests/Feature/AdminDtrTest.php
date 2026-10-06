@@ -49,7 +49,9 @@ class AdminDtrTest extends TestCase
             ->assertSee('type="month"', false)
             ->assertSee('value="2026-09"', false)
             ->assertSee('Remote Operations')
-            ->assertSee('7:45 AM')
+            ->assertDontSee('7:45 AM')
+            ->assertDontSee('4:30 PM')
+            ->assertSee('7.75')
             ->assertSee('FIELD-BASED')
             ->assertSee('ON LEAVE')
             ->assertViewHas('dtr', fn (array $dtr): bool => $dtr['employee']->is($employee));
@@ -58,7 +60,11 @@ class AdminDtrTest extends TestCase
     public function test_global_admin_can_download_any_employee_pdf(): void
     {
         $admin = User::factory()->admin()->create();
-        $employee = Employee::factory()->create(['employee_number' => 'EMP-ADMIN-DTR']);
+        $employee = Employee::factory()->create([
+            'employee_number' => 'EMP-ADMIN-DTR',
+            'first_name' => 'Cris David',
+            'last_name' => 'Castro',
+        ]);
 
         $response = $this->actingAs($admin)->get(route('admin.dtr.pdf', [
             'employee_id' => $employee->id,
@@ -68,7 +74,7 @@ class AdminDtrTest extends TestCase
         $response->assertOk()
             ->assertHeader('content-type', 'application/pdf');
         $this->assertStringContainsString(
-            'filename=DTR_EMP-ADMIN-DTR_2026-09.pdf',
+            'filename=DTR_CASTRO_CRIS-DAVID_2026-09.pdf',
             (string) $response->headers->get('content-disposition'),
         );
     }

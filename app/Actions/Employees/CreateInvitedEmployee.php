@@ -11,6 +11,7 @@ use App\Models\User;
 use DateTimeInterface;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Mail;
+use Illuminate\Support\Str;
 
 class CreateInvitedEmployee
 {
@@ -20,18 +21,22 @@ class CreateInvitedEmployee
     ) {}
 
     public function handle(
-        string $name,
+        string $firstName,
+        string $lastName,
         string $email,
         string $employeeNumber,
         ?Department $department = null,
         ?string $jobTitle = null,
         ?DateTimeInterface $hiredAt = null,
     ): Employee {
+        $firstName = Str::squish($firstName);
+        $lastName = Str::squish($lastName);
+
         /** @var array{employee: Employee, user: User, token: string} $result */
-        $result = DB::transaction(function () use ($name, $email, $employeeNumber, $department, $jobTitle, $hiredAt): array {
+        $result = DB::transaction(function () use ($firstName, $lastName, $email, $employeeNumber, $department, $jobTitle, $hiredAt): array {
             $user = new User;
             $user->forceFill([
-                'name' => $name,
+                'name' => $firstName.' '.$lastName,
                 'email' => $email,
                 'password' => null,
                 'role' => UserRole::Employee,
@@ -44,6 +49,8 @@ class CreateInvitedEmployee
                 department: $department,
                 jobTitle: $jobTitle,
                 hiredAt: $hiredAt,
+                firstName: $firstName,
+                lastName: $lastName,
             );
 
             return [

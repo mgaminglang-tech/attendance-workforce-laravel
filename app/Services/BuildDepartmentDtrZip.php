@@ -53,7 +53,7 @@ class BuildDepartmentDtrZip
                 $dtr = $this->buildMonthlyDtr->handle($employee, $selectedMonth);
                 $filename = $this->uniqueFilename(
                     $this->monthlyDtrPdf->filename($dtr),
-                    $employee,
+                    $month,
                     $usedFilenames,
                 );
 
@@ -102,13 +102,21 @@ class BuildDepartmentDtrZip
     }
 
     /** @param array<string, bool> $usedFilenames */
-    private function uniqueFilename(string $filename, Employee $employee, array $usedFilenames): string
+    private function uniqueFilename(string $filename, string $month, array $usedFilenames): string
     {
         if (! isset($usedFilenames[$filename])) {
             return $filename;
         }
 
-        return pathinfo($filename, PATHINFO_FILENAME).'_'.$employee->getKey().'.pdf';
+        $stem = substr($filename, 0, -strlen('_'.$month.'.pdf'));
+        $sequence = 2;
+
+        do {
+            $candidate = "{$stem}_{$sequence}_{$month}.pdf";
+            $sequence++;
+        } while (isset($usedFilenames[$candidate]));
+
+        return $candidate;
     }
 
     private function archiveFilename(Department $department, string $month): string

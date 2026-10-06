@@ -2,9 +2,14 @@
 
 <div class="row g-3">
     <div class="col-md-6">
-        <label class="form-label" for="name">Full name</label>
-        <input class="form-control @error('name') is-invalid @enderror" id="name" name="name" value="{{ old('name', $employee?->user->name) }}" required>
-        @error('name')<div class="invalid-feedback">{{ $message }}</div>@enderror
+        <label class="form-label" for="first_name">First Name</label>
+        <input class="form-control @error('first_name') is-invalid @enderror" id="first_name" name="first_name" autocomplete="given-name" maxlength="255" value="{{ old('first_name', $employee?->first_name) }}" required @error('first_name') aria-invalid="true" aria-describedby="first_name_error" @enderror>
+        @error('first_name')<div class="invalid-feedback" id="first_name_error">{{ $message }}</div>@enderror
+    </div>
+    <div class="col-md-6">
+        <label class="form-label" for="last_name">Last Name</label>
+        <input class="form-control @error('last_name') is-invalid @enderror" id="last_name" name="last_name" autocomplete="family-name" maxlength="255" value="{{ old('last_name', $employee?->last_name) }}" required @error('last_name') aria-invalid="true" aria-describedby="last_name_error" @enderror>
+        @error('last_name')<div class="invalid-feedback" id="last_name_error">{{ $message }}</div>@enderror
     </div>
     <div class="col-md-6">
         <label class="form-label" for="email">Email address</label>

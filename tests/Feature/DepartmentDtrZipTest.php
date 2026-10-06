@@ -31,14 +31,20 @@ class DepartmentDtrZipTest extends TestCase
         $admin = User::factory()->admin()->create();
         $finance = Department::factory()->create(['name' => 'Finance / Operations']);
         $it = Department::factory()->create(['name' => 'IT']);
-        $first = Employee::factory()->for($finance)->create(['employee_number' => 'FIN-001']);
+        $first = Employee::factory()->for($finance)->create([
+            'employee_number' => 'FIN-001', 'first_name' => 'Cris David', 'last_name' => 'Castro',
+        ]);
         Employee::factory()
             ->for(User::factory()->employee()->disabled())
             ->for($finance)
             ->inactive()
-            ->create(['employee_number' => 'FIN-002']);
-        Employee::factory()->for($finance)->create(['employee_number' => 'FIN 003/QA']);
-        $foreign = Employee::factory()->for($it)->create(['employee_number' => 'IT-001']);
+            ->create(['employee_number' => 'FIN-002', 'first_name' => 'Juan', 'last_name' => 'Santos']);
+        Employee::factory()->for($finance)->create([
+            'employee_number' => 'FIN 003/QA', 'first_name' => 'Ana Marie', 'last_name' => 'De la Cruz',
+        ]);
+        $foreign = Employee::factory()->for($it)->create([
+            'employee_number' => 'IT-001', 'first_name' => 'Foreign', 'last_name' => 'Employee',
+        ]);
         AttendanceSession::factory()->for($first)->create(['work_date' => '2026-09-10']);
         AttendanceSession::factory()->for($foreign)->create(['work_date' => '2026-09-10']);
         $temporaryBefore = $this->temporaryZipFiles();
@@ -67,13 +73,13 @@ class DepartmentDtrZipTest extends TestCase
         $entries = $this->zipEntries($this->downloadContent($response));
 
         $this->assertSame([
-            'DTR_FIN-001_2026-09.pdf',
-            'DTR_FIN-002_2026-09.pdf',
-            'DTR_FIN_003_QA_2026-09.pdf',
+            'DTR_CASTRO_CRIS-DAVID_2026-09.pdf',
+            'DTR_DE-LA-CRUZ_ANA-MARIE_2026-09.pdf',
+            'DTR_SANTOS_JUAN_2026-09.pdf',
         ], array_keys($entries));
-        $this->assertStringStartsWith('%PDF-', $entries['DTR_FIN-001_2026-09.pdf']);
-        $this->assertStringStartsWith('%PDF-', $entries['DTR_FIN-002_2026-09.pdf']);
-        $this->assertArrayNotHasKey('DTR_IT-001_2026-09.pdf', $entries);
+        $this->assertStringStartsWith('%PDF-', $entries['DTR_CASTRO_CRIS-DAVID_2026-09.pdf']);
+        $this->assertStringStartsWith('%PDF-', $entries['DTR_SANTOS_JUAN_2026-09.pdf']);
+        $this->assertArrayNotHasKey('DTR_EMPLOYEE_FOREIGN_2026-09.pdf', $entries);
         $this->assertSame($temporaryBefore, $this->temporaryZipFiles());
 
         $itResponse = $this->actingAs($admin)->get(route('admin.reports.dtr.bulk', [
@@ -83,7 +89,7 @@ class DepartmentDtrZipTest extends TestCase
 
         $itResponse->assertOk();
         $this->assertSame(
-            ['DTR_IT-001_2026-09.pdf'],
+            ['DTR_EMPLOYEE_FOREIGN_2026-09.pdf'],
             array_keys($this->zipEntries($this->downloadContent($itResponse))),
         );
     }
@@ -99,7 +105,7 @@ class DepartmentDtrZipTest extends TestCase
             'time_out_at' => '2026-09-10 13:22:00',
         ]);
         $this->mock(MonthlyDtrPdf::class, function ($mock): void {
-            $mock->shouldReceive('filename')->once()->andReturn('DTR_FIN-001_2026-09.pdf');
+            $mock->shouldReceive('filename')->once()->andReturn('DTR_CASTRO_CRIS-DAVID_2026-09.pdf');
             $mock->shouldReceive('render')
                 ->once()
                 ->withArgs(fn (array $dtr): bool => $dtr['rows'][9]['total_hours'] === '5.37')
@@ -114,7 +120,7 @@ class DepartmentDtrZipTest extends TestCase
         $response->assertOk();
         $this->assertSame(
             '%PDF-1.4 shared net hours',
-            $this->zipEntries($this->downloadContent($response))['DTR_FIN-001_2026-09.pdf'],
+            $this->zipEntries($this->downloadContent($response))['DTR_CASTRO_CRIS-DAVID_2026-09.pdf'],
         );
     }
 
@@ -125,7 +131,7 @@ class DepartmentDtrZipTest extends TestCase
         $employee = Employee::factory()->for($department)->create(['employee_number' => 'FIN-001']);
         EmployeeLeaveDay::factory()->for($employee)->create(['leave_date' => '2026-09-10']);
         $this->mock(MonthlyDtrPdf::class, function ($mock): void {
-            $mock->shouldReceive('filename')->once()->andReturn('DTR_FIN-001_2026-09.pdf');
+            $mock->shouldReceive('filename')->once()->andReturn('DTR_CASTRO_CRIS-DAVID_2026-09.pdf');
             $mock->shouldReceive('render')
                 ->once()
                 ->withArgs(fn (array $dtr): bool => $dtr['rows'][9]['attendance_rendered'] === 'ON LEAVE'
@@ -142,7 +148,7 @@ class DepartmentDtrZipTest extends TestCase
         $response->assertOk();
         $this->assertSame(
             '%PDF-1.4 shared leave row',
-            $this->zipEntries($this->downloadContent($response))['DTR_FIN-001_2026-09.pdf'],
+            $this->zipEntries($this->downloadContent($response))['DTR_CASTRO_CRIS-DAVID_2026-09.pdf'],
         );
     }
 
@@ -152,8 +158,12 @@ class DepartmentDtrZipTest extends TestCase
         $it = Department::factory()->create(['name' => 'IT']);
         $representative = User::factory()->employee()->has(Employee::factory())->create();
         DepartmentHrAssignment::factory()->for($finance)->for($representative)->create();
-        Employee::factory()->for($finance)->create(['employee_number' => 'FIN-001']);
-        Employee::factory()->for($it)->create(['employee_number' => 'IT-001']);
+        Employee::factory()->for($finance)->create([
+            'employee_number' => 'FIN-001', 'first_name' => 'Cris David', 'last_name' => 'Castro',
+        ]);
+        Employee::factory()->for($it)->create([
+            'employee_number' => 'IT-001', 'first_name' => 'Foreign', 'last_name' => 'Employee',
+        ]);
 
         $response = $this->actingAs($representative)->get(route('hr.reports.dtr.bulk', [
             'month' => '2026-09',
@@ -166,7 +176,7 @@ class DepartmentDtrZipTest extends TestCase
         $this->assertStringContainsString('private', (string) $response->headers->get('cache-control'));
         $this->assertStringContainsString('no-store', (string) $response->headers->get('cache-control'));
         $this->assertSame(
-            ['DTR_FIN-001_2026-09.pdf'],
+            ['DTR_CASTRO_CRIS-DAVID_2026-09.pdf'],
             array_keys($this->zipEntries($this->downloadContent($response))),
         );
 
@@ -184,6 +194,8 @@ class DepartmentDtrZipTest extends TestCase
         foreach (range(1, 30) as $number) {
             Employee::factory()->for($department)->create([
                 'employee_number' => sprintf('EMP-%04d', $number),
+                'first_name' => 'Team Member '.$number,
+                'last_name' => 'Santos',
             ]);
         }
 
@@ -196,8 +208,58 @@ class DepartmentDtrZipTest extends TestCase
         $entries = $this->zipEntries($this->downloadContent($response));
 
         $this->assertCount(30, $entries);
-        $this->assertArrayHasKey('DTR_EMP-0001_2026-09.pdf', $entries);
-        $this->assertArrayHasKey('DTR_EMP-0030_2026-09.pdf', $entries);
+        $this->assertArrayHasKey('DTR_SANTOS_TEAM-MEMBER-1_2026-09.pdf', $entries);
+        $this->assertArrayHasKey('DTR_SANTOS_TEAM-MEMBER-30_2026-09.pdf', $entries);
+    }
+
+    #[DataProvider('collidingNames')]
+    public function test_colliding_names_keep_every_employee_in_stable_order_and_reset_for_each_archive(bool $legacy): void
+    {
+        $admin = User::factory()->admin()->create();
+        $department = Department::factory()->create(['name' => 'Finance']);
+
+        foreach ([3, 1, 2] as $number) {
+            Employee::factory()
+                ->for(User::factory()->employee()->state(['name' => $number === 2 ? 'Juan! Santos' : 'Juan Santos']))
+                ->for($department)
+                ->create([
+                    'id' => 700 + $number,
+                    'employee_number' => sprintf('FIN-%03d', $number),
+                    'first_name' => $legacy ? null : 'Juan',
+                    'last_name' => $legacy ? null : ($number === 2 ? 'Santos!' : 'Santos'),
+                ]);
+        }
+
+        $this->partialMock(MonthlyDtrPdf::class, function ($mock): void {
+            $mock->shouldReceive('render')->times(6)->andReturnUsing(
+                fn (array $dtr): string => '%PDF-1.4 '.$dtr['employee_number'],
+            );
+        });
+        $stem = $legacy ? 'DTR_JUAN-SANTOS' : 'DTR_SANTOS_JUAN';
+
+        foreach (range(1, 2) as $generation) {
+            $response = $this->actingAs($admin)->get(route('admin.reports.dtr.bulk', [
+                'department' => $department->id,
+                'month' => '2026-09',
+            ]));
+
+            $response->assertDownload('Finance_DTR_2026-09.zip');
+            $entries = $this->zipEntries($this->downloadContent($response));
+
+            $this->assertSame([
+                $stem.'_2026-09.pdf' => '%PDF-1.4 FIN-001',
+                $stem.'_2_2026-09.pdf' => '%PDF-1.4 FIN-002',
+                $stem.'_3_2026-09.pdf' => '%PDF-1.4 FIN-003',
+            ], $entries);
+            $this->assertCount(3, $entries);
+            $this->assertDoesNotMatchRegularExpression('/70[123]/', implode(' ', array_keys($entries)));
+        }
+    }
+
+    /** @return array<string, array{bool}> */
+    public static function collidingNames(): array
+    {
+        return ['structured names' => [false], 'legacy display names' => [true]];
     }
 
     public function test_bulk_routes_reject_invalid_input_and_unauthorized_employees(): void
@@ -228,7 +290,7 @@ class DepartmentDtrZipTest extends TestCase
         Employee::factory()->for($department)->create();
         $temporaryBefore = $this->temporaryZipFiles();
         $this->mock(MonthlyDtrPdf::class, function ($mock): void {
-            $mock->shouldReceive('filename')->once()->andReturn('DTR_EMP-0001_2026-09.pdf');
+            $mock->shouldReceive('filename')->once()->andReturn('DTR_TEST-EMPLOYEE_2026-09.pdf');
             $mock->shouldReceive('render')->once()->andThrow(new RuntimeException('private path failure'));
         });
 
@@ -270,7 +332,7 @@ class DepartmentDtrZipTest extends TestCase
                 })->passthru();
         });
         $this->mock(MonthlyDtrPdf::class, function ($mock) use ($directory): void {
-            $mock->shouldReceive('filename')->once()->andReturn('DTR_EMP-0001_2026-09.pdf');
+            $mock->shouldReceive('filename')->once()->andReturn('DTR_TEST-EMPLOYEE_2026-09.pdf');
             $mock->shouldReceive('render')->once()->andReturnUsing(function () use ($directory): string {
                 $this->assertTrue(rmdir($directory));
 
@@ -310,7 +372,7 @@ class DepartmentDtrZipTest extends TestCase
         $temporaryBefore = $this->temporaryZipFiles();
         $archivePath = null;
         $this->mock(MonthlyDtrPdf::class, function ($mock): void {
-            $mock->shouldReceive('filename')->once()->andReturn('DTR_EMP-0001_2026-09.pdf');
+            $mock->shouldReceive('filename')->once()->andReturn('DTR_TEST-EMPLOYEE_2026-09.pdf');
             $mock->shouldReceive('render')->once()->andReturn('%PDF-1.4 response failure fixture');
         });
         Response::partialMock()->shouldReceive('download')

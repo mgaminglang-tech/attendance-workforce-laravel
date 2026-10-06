@@ -60,7 +60,8 @@ class EmployeeController extends Controller
     public function store(StoreEmployeeRequest $request, CreateInvitedEmployee $createInvitedEmployee): RedirectResponse
     {
         $employee = $createInvitedEmployee->handle(
-            name: $request->string('name')->toString(),
+            firstName: $request->string('first_name')->toString(),
+            lastName: $request->string('last_name')->toString(),
             email: $request->string('email')->toString(),
             employeeNumber: $request->string('employee_number')->toString(),
             department: $request->filled('department_id')
@@ -104,7 +105,8 @@ class EmployeeController extends Controller
     ): RedirectResponse {
         $updateEmployeeProfile->handle(
             employee: $employee,
-            name: $request->string('name')->toString(),
+            firstName: $request->string('first_name')->toString(),
+            lastName: $request->string('last_name')->toString(),
             email: $request->string('email')->toString(),
             employeeNumber: $request->string('employee_number')->toString(),
             department: $request->filled('department_id')

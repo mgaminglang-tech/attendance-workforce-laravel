@@ -10,7 +10,15 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
-#[Fillable(['employee_number', 'department_id', 'job_title', 'employment_status', 'hired_at'])]
+#[Fillable([
+    'first_name',
+    'last_name',
+    'employee_number',
+    'department_id',
+    'job_title',
+    'employment_status',
+    'hired_at',
+])]
 class Employee extends Model
 {
     /** @use HasFactory<EmployeeFactory> */

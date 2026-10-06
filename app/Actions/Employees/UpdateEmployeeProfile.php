@@ -11,6 +11,7 @@ use App\Models\User;
 use DateTimeInterface;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Mail;
+use Illuminate\Support\Str;
 
 class UpdateEmployeeProfile
 {
@@ -18,25 +19,31 @@ class UpdateEmployeeProfile
 
     public function handle(
         Employee $employee,
-        string $name,
+        string $firstName,
+        string $lastName,
         string $email,
         string $employeeNumber,
         ?Department $department = null,
         ?string $jobTitle = null,
         ?DateTimeInterface $hiredAt = null,
     ): Employee {
+        $firstName = Str::squish($firstName);
+        $lastName = Str::squish($lastName);
+
         /** @var array{employee: Employee, user: User, token: string|null} $result */
-        $result = DB::transaction(function () use ($employee, $name, $email, $employeeNumber, $department, $jobTitle, $hiredAt): array {
+        $result = DB::transaction(function () use ($employee, $firstName, $lastName, $email, $employeeNumber, $department, $jobTitle, $hiredAt): array {
             $user = User::query()->lockForUpdate()->findOrFail($employee->user_id);
             $shouldRotateInvitation = $user->account_status === AccountStatus::Pending
                 && $user->email !== $email;
 
             $user->update([
-                'name' => $name,
+                'name' => $firstName.' '.$lastName,
                 'email' => $email,
             ]);
 
             $employee->update([
+                'first_name' => $firstName,
+                'last_name' => $lastName,
                 'employee_number' => $employeeNumber,
                 'department_id' => $department?->getKey(),
                 'job_title' => $jobTitle,

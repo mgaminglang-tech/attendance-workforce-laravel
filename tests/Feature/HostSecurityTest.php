@@ -96,7 +96,8 @@ class HostSecurityTest extends TestCase
         }
 
         $this->actingAs($admin)->post(self::ORIGIN.'/admin/employees', [
-            'name' => 'Invited Employee',
+            'first_name' => 'Invited',
+            'last_name' => 'Employee',
             'email' => 'invited@example.test',
             'employee_number' => 'EMP-HOST',
             '_token' => self::CSRF_TOKEN,
@@ -131,7 +132,8 @@ class HostSecurityTest extends TestCase
         $admin = User::factory()->admin()->create();
 
         $this->actingAs($admin)->post('https://evil.example.test/admin/employees', [
-            'name' => 'Invited Employee',
+            'first_name' => 'Invited',
+            'last_name' => 'Employee',
             'email' => 'invited@example.test',
             'employee_number' => 'EMP-HOST',
             '_token' => self::CSRF_TOKEN,
