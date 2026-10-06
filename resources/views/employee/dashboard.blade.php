@@ -29,7 +29,7 @@
         @endif
 
         <div class="employee-dashboard-grid">
-            <div>
+            <div class="attendance-primary-column">
                 @if ($employee === null)
                     <section class="attendance-console" aria-labelledby="profile-unavailable-heading">
                         <p class="eyebrow mb-1">Attendance unavailable</p>
@@ -38,6 +38,7 @@
                     </section>
                 @else
                     @include('employee.attendance._status-panel')
+                    @include('employee.attendance._leave-panel')
                 @endif
             </div>
 
@@ -66,4 +67,8 @@
             </section>
         </div>
     </div>
+
+    @if ($employee !== null)
+        @include('employee.attendance._record-leave-modal')
+    @endif
 @endsection

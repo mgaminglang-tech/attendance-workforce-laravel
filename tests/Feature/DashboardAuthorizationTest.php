@@ -2,13 +2,18 @@
 
 namespace Tests\Feature;
 
+use App\Enums\AccountStatus;
 use App\Models\AttendanceSession;
 use App\Models\Department;
 use App\Models\DepartmentHrAssignment;
 use App\Models\Employee;
+use App\Models\EmployeeLeaveDay;
 use App\Models\User;
 use Carbon\CarbonImmutable;
+use DOMDocument;
+use DOMXPath;
 use Illuminate\Foundation\Testing\LazilyRefreshDatabase;
+use PHPUnit\Framework\Attributes\DataProvider;
 use Tests\TestCase;
 
 class DashboardAuthorizationTest extends TestCase
@@ -46,7 +51,114 @@ class DashboardAuthorizationTest extends TestCase
             ->assertSee('Employee Dashboard')
             ->assertSee('navbar-toggler', false)
             ->assertSee($user->name)
+            ->assertSee('Employee profile not found')
+            ->assertDontSee('Record Leave')
+            ->assertDontSee('id="record-leave-modal"', false)
             ->assertDontSee(route('admin.employees.index'), false);
+    }
+
+    public function test_employee_can_record_leave_from_a_fresh_dashboard_visit(): void
+    {
+        $this->travelTo(CarbonImmutable::parse('2026-10-06 08:00:00', 'Asia/Manila'));
+        $user = User::factory()->employee()->create();
+        $employee = Employee::factory()->for($user)->create();
+
+        $response = $this->actingAs($user)->get(route('employee.dashboard'))
+            ->assertOk()
+            ->assertSee('Record Leave')
+            ->assertSee('data-bs-target="#record-leave-modal"', false)
+            ->assertSee('Record time away')
+            ->assertSee('href="'.route('employee.attendance.history').'">View all', false);
+
+        $document = new DOMDocument;
+        @$document->loadHTML($response->getContent());
+        $xpath = new DOMXPath($document);
+        $forms = $xpath->query('//*[@id="record-leave-modal"]//form');
+        $this->assertCount(1, $forms);
+        $form = $forms->item(0);
+        $this->assertSame('POST', $form->getAttribute('method'));
+        $this->assertSame(route('employee.attendance.leave.store'), $form->getAttribute('action'));
+        $this->assertCount(1, $xpath->query('.//input[@name="_token"]', $form));
+        $this->assertCount(2, $xpath->query('.//input[@type="date" and @value="2026-10-06"]', $form));
+        $this->assertCount(0, $xpath->query('.//input[@name="employee_id"]', $form));
+
+        $this->from(route('employee.dashboard'))->post($form->getAttribute('action'), [
+            'from_date' => '2026-10-07',
+            'to_date' => '2026-10-08',
+        ])->assertRedirect(route('employee.attendance.index'))
+            ->assertSessionHas('status', 'Leave recorded for 2 days.');
+
+        $this->assertSame(
+            ['2026-10-07', '2026-10-08'],
+            $employee->leaveDays()->orderBy('leave_date')->pluck('leave_date')->map->toDateString()->all(),
+        );
+    }
+
+    public function test_employee_dashboard_shows_only_own_current_and_upcoming_leave(): void
+    {
+        $this->travelTo(CarbonImmutable::parse('2026-10-06 08:00:00', 'Asia/Manila'));
+        $user = User::factory()->employee()->create();
+        $employee = Employee::factory()->for($user)->create();
+        $todayLeave = EmployeeLeaveDay::factory()->for($employee)->create(['leave_date' => '2026-10-06']);
+        $upcomingLeave = EmployeeLeaveDay::factory()->for($employee)->create(['leave_date' => '2026-10-08']);
+        $pastLeave = EmployeeLeaveDay::factory()->for($employee)->create(['leave_date' => '2026-10-05']);
+        $otherLeave = EmployeeLeaveDay::factory()->create(['leave_date' => '2026-10-09']);
+
+        $this->actingAs($user)->get(route('employee.dashboard'))
+            ->assertOk()
+            ->assertSee('Record Leave')
+            ->assertSee('Current and upcoming leave')
+            ->assertSee('On Leave')
+            ->assertSee('Thu, Oct 8')
+            ->assertSee(route('employee.attendance.leave.destroy', $todayLeave), false)
+            ->assertSee(route('employee.attendance.leave.destroy', $upcomingLeave), false)
+            ->assertDontSee(route('employee.attendance.leave.destroy', $pastLeave), false)
+            ->assertDontSee(route('employee.attendance.leave.destroy', $otherLeave), false)
+            ->assertDontSee(route('employee.attendance.time-in'), false);
+    }
+
+    public function test_leave_validation_returns_to_dashboard_with_the_shared_modal_ready_to_reopen(): void
+    {
+        $user = User::factory()->employee()->create();
+        Employee::factory()->for($user)->create();
+
+        $this->actingAs($user)->from(route('employee.dashboard'))
+            ->post(route('employee.attendance.leave.store'), [
+                'from_date' => '2026-10-08',
+                'to_date' => '2026-10-07',
+            ])->assertRedirect(route('employee.dashboard'))
+            ->assertSessionHasErrors(['to_date' => 'The last day must be on or after the first day.']);
+
+        $this->withCookie(config('session.cookie'), session()->getId())->get(route('employee.dashboard'))
+            ->assertOk()
+            ->assertSee('data-open-modal-on-load="true"', false)
+            ->assertSee('value="2026-10-08"', false)
+            ->assertSee('value="2026-10-07"', false)
+            ->assertSee('The last day must be on or after the first day.');
+
+        $this->assertDatabaseCount('employee_leave_days', 0);
+    }
+
+    #[DataProvider('nonActiveAccountStatuses')]
+    public function test_non_active_employee_account_cannot_access_dashboard(AccountStatus $status): void
+    {
+        $user = User::factory()->employee()->create(['account_status' => $status]);
+        Employee::factory()->for($user)->create();
+
+        $this->actingAs($user)->get(route('employee.dashboard'))
+            ->assertRedirect(route('login'))
+            ->assertSessionHasErrors(['email' => 'Your account is not active. Please contact an administrator.']);
+
+        $this->assertGuest();
+    }
+
+    /** @return array<string, array{AccountStatus}> */
+    public static function nonActiveAccountStatuses(): array
+    {
+        return [
+            'pending' => [AccountStatus::Pending],
+            'disabled' => [AccountStatus::Disabled],
+        ];
     }
 
     public function test_admin_can_access_admin_dashboard(): void
